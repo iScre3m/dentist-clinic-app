@@ -14,13 +14,14 @@
 	}
 </script>
 
-<div class="bg-muted/40 text-foreground min-h-screen">
+<div class="bg-muted text-foreground min-h-screen">
 	<header class="bg-background border-b">
 		<div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
 			<div class="flex items-center gap-6">
 				<span class="text-sm font-semibold">Consultorio</span>
 				<nav class="text-muted-foreground flex gap-4 text-sm">
 					<a href={resolve('/(app)/dashboard')} class="hover:text-foreground">Panel</a>
+					<a href={resolve('/(app)/pacientes')} class="hover:text-foreground">Pacientes</a>
 				</nav>
 			</div>
 			<div class="flex items-center gap-3 text-sm">

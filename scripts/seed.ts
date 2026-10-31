@@ -82,7 +82,7 @@ if (existingPatients.length > 0) {
 			name: 'Sofía Duarte',
 			phone: '+5491144440002',
 			phoneVerifiedAt: atART(-10, 9),
-			whatsappConsent: 'unknown',
+			whatsappConsent: 'denied',
 			registeredAt: atART(-10, 9)
 		}
 	]);

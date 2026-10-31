@@ -33,7 +33,7 @@ export async function registerPatient(input: RegistrationInput): Promise<Registe
 		.insert(patients)
 		.values({
 			id: randomUUID(),
-			name: input.name,
+			name: input.firstName + ' ' + input.lastName,
 			phone: phone.e164,
 			whatsappConsent: 'granted',
 			consentSource: 'registration',
@@ -46,7 +46,7 @@ export async function registerPatient(input: RegistrationInput): Promise<Registe
 		.onConflictDoUpdate({
 			target: patients.phone,
 			set: {
-				name: input.name,
+				name: input.firstName + ' ' + input.lastName,
 				whatsappConsent: 'granted',
 				consentSource: 'registration',
 				consentTextVersion: CONSENT_VERSION,

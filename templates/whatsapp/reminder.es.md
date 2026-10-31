@@ -30,7 +30,7 @@ su propio WhatsApp.
 | `{{consultorio}}`        | Consultorio Dra. Laura  |
 | `{{nombre_odontologa}}`  | Dra. Laura              |
 | `{{telefono_consultorio}}` | +54 11 5555-5555      |
-| `{{link_registro}}`      | https://app.../registro |
+| `{{link_registro}}`      | https://app.../ |
 
 ## Plantillas
 

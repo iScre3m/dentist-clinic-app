@@ -3,7 +3,7 @@ import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = ({ locals }) => {
 	if (!locals.session) {
-		redirect(303, '/login');
+		throw redirect(303, '/login');
 	}
 
 	return { user: locals.session.user };

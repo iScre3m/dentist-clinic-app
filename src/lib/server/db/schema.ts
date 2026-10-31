@@ -12,7 +12,6 @@ export const user = sqliteTable('user', {
 	name: text('name').notNull(),
 	email: text('email').notNull().unique(),
 	emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
-	image: text('image'),
 	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
 	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
 });
@@ -67,10 +66,10 @@ export const patients = sqliteTable(
 		phoneVerifiedAt: integer('phone_verified_at', { mode: 'timestamp_ms' }),
 		email: text('email'),
 		whatsappConsent: text('whatsapp_consent', {
-			enum: ['unknown', 'granted', 'denied']
+			enum: ['granted', 'denied']
 		})
 			.notNull()
-			.default('unknown'),
+			.default('denied'),
 		consentSource: text('consent_source', { enum: ['registration', 'staff'] }),
 		consentTextVersion: integer('consent_text_version'),
 		consentRecordedAt: integer('consent_recorded_at', { mode: 'timestamp_ms' }),

@@ -1,6 +1,62 @@
-import { redirect } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
+import * as v from 'valibot';
+import { phoneFailureMessage } from '#lib/copy.ts';
+import { countries } from '#lib/server/countries.ts';
+import { registrationSchema } from '#lib/schemas/patient.schema.ts';
+import { CONSENT_TEXT, CONSENT_VERSION } from '#lib/server/consent.ts';
+import { checkRateLimit } from '#lib/server/rate-limit.ts';
+import { registerPatient } from '#lib/server/services/patients/register.ts';
+import type { Actions, PageServerLoad } from './$types.ts';
 
-export const load: PageServerLoad = ({ locals }) => {
-	redirect(303, locals.session ? '/dashboard' : '/login');
+const REGISTRATIONS_PER_HOUR = 5;
+
+export const load: PageServerLoad = () => ({
+	countries,
+	defaultCountry: 'AR',
+	consentText: CONSENT_TEXT,
+	consentVersion: CONSENT_VERSION
+});
+
+export const actions: Actions = {
+	register: async ({ request, getClientAddress }) => {
+		const form = await request.formData();
+		const values = {
+			firstName: String(form.get('firstName') ?? ''),
+			lastName: String(form.get('lastName') ?? ''),
+			country: String(form.get('country') ?? 'AR'),
+			phone: String(form.get('phone') ?? '')
+		};
+
+		if (!checkRateLimit(`registro:${getClientAddress()}`, REGISTRATIONS_PER_HOUR, 60 * 60 * 1000)) {
+			return fail(429, {
+				success: false,
+				message: 'Recibimos demasiados registros desde esta conexión. Probá de nuevo más tarde.',
+				values
+			});
+		}
+
+		const parsed = v.safeParse(registrationSchema, {
+			...values,
+			consent: form.get('consent') === 'on'
+		});
+
+		if (!parsed.success) {
+			return fail(400, {
+				success: false,
+				message: parsed.issues[0]?.message ?? 'Revisá los datos.',
+				values
+			});
+		}
+
+		const result = await registerPatient(parsed.output);
+		if (!result.ok) {
+			return fail(400, { success: false, message: phoneFailureMessage(result.reason), values });
+		}
+
+		return {
+			success: true,
+			message: 'Listo. Recibimos tu registro.',
+			values: { firstName: '', lastName: '', country: values.country, phone: '' }
+		};
+	}
 };

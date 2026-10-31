@@ -1,0 +1,142 @@
+<script lang="ts">
+	import { Badge } from "#lib/components/ui/badge/index.ts";
+	import * as Card from '#lib/components/ui/card/index.ts';
+	import { Button } from "#lib/components/ui/button/index.ts";
+	import { Input } from "#lib/components/ui/input/index.ts";
+	import { Label } from "#lib/components/ui/label/index.ts";
+	import { formatDateTime } from "#lib/format.ts";
+	import { enhance } from "$app/forms";
+	import type { PageData } from "./$types";
+
+	let { data, form }: { data: PageData; form: any } = $props();
+
+	const attendanceLabels: Record<string, string> = {
+		scheduled: "Sin confirmar",
+		confirmed: "Confirmado",
+		attended: "Asistió",
+		no_show: "No vino"
+	};
+
+	const attendanceClasses: Record<string, string> = {
+		scheduled: "border-amber-200 bg-amber-50 text-amber-800",
+		confirmed: "border-emerald-200 bg-emerald-50 text-emerald-800",
+		attended: "",
+		no_show: "border-red-200 bg-red-50 text-red-800"
+	};
+
+	function getInviteUrl() {
+		const base = typeof window !== "undefined" ? window.location.origin : "";
+		const msg = "Hola, te invitamos a registrarte para recibir recordatorios: " + base + "/";
+		return "https://wa.me/?text=" + encodeURIComponent(msg);
+	}
+</script>
+
+<svelte:head>
+	<title>Panel · Consultorio</title>
+</svelte:head>
+
+<div class="space-y-6">
+	<header>
+		<h1 class="text-xl font-semibold">Panel</h1>
+		<p class="text-muted-foreground mt-1 text-sm">
+			Turnos próximos y eventos que necesitan un paciente.
+		</p>
+	</header>
+
+	<Card.Root>
+		<Card.Header class="flex flex-row items-center justify-between">
+			<div>
+				<Card.Title>Sincronización con Google Calendar</Card.Title>
+				<Card.Description>
+					{#if data.syncState?.lastSyncedAt}
+						Última sincronización: {formatDateTime(new Date(data.syncState.lastSyncedAt))}
+					{:else}
+						Sin sincronización registrada
+					{/if}
+					{#if data.syncState?.lastError}
+						· Error: {data.syncState.lastError}
+					{/if}
+				</Card.Description>
+			</div>
+			<div class="flex gap-2">
+				<form method="POST" action="?/incrementalSync" use:enhance>
+					<Button type="submit" variant="outline" size="sm">Sincronizar</Button>
+				</form>
+				<form method="POST" action="?/sync" use:enhance>
+					<Button type="submit" size="sm">Sincronizar ahora</Button>
+				</form>
+			</div>
+		</Card.Header>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Próximos turnos</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			{#if data.upcoming.length === 0}
+				<p class="text-muted-foreground text-sm">No hay turnos próximos.</p>
+			{:else}
+				<ul class="divide-y">
+					{#each data.upcoming as appointment (appointment.id)}
+						<li class="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+							<div>
+								<p class="text-sm font-medium">{appointment.patientName ?? "Sin paciente"}</p>
+								<p class="text-muted-foreground text-xs">
+									{formatDateTime(appointment.startsAt, appointment.allDay)}
+									{#if appointment.patientPhone}
+										· {appointment.patientPhone}
+									{/if}
+								</p>
+							</div>
+							<Badge variant="outline" class={attendanceClasses[appointment.attendanceStatus]}>
+								{attendanceLabels[appointment.attendanceStatus]}
+							</Badge>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Eventos sin paciente</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			{#if data.unmatched.length === 0}
+				<p class="text-muted-foreground text-sm">No hay eventos sin paciente.</p>
+			{:else}
+				<ul class="divide-y">
+					{#each data.unmatched as appointment (appointment.id)}
+						<li class="flex flex-col gap-3 py-3 first:pt-0 last:pb-0">
+							<div class="flex items-center justify-between gap-4">
+								<div>
+									<p class="text-sm font-medium">{appointment.summary ?? "Sin título"}</p>
+									<p class="text-muted-foreground text-xs">
+										{formatDateTime(appointment.startsAt, appointment.allDay)}
+									</p>
+								</div>
+								<Badge variant="outline" class="border-amber-200 bg-amber-50 text-amber-800">
+									Falta vincular
+								</Badge>
+							</div>
+							<div class="flex flex-wrap items-center gap-2">
+								<form method="POST" action="?/linkPatient" use:enhance class="flex items-center gap-2">
+									<input type="hidden" name="appointmentId" value={appointment.id} />
+									<Label for={"phone-" + appointment.id} class="sr-only">Teléfono</Label>
+									<Input id={"phone-" + appointment.id} name="phone" placeholder="+54 9 11..." class="w-48" />
+									<Button type="submit" size="sm" variant="outline">Vincular paciente</Button>
+								</form>
+								<Button size="sm" variant="ghost" onclick={() => window.open(getInviteUrl(), "_blank")}>
+									Enviar invitación a registrarse
+								</Button>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+</div>
+
