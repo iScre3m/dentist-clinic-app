@@ -118,9 +118,11 @@
 								</p>
 							</div>
 							<div class='flex items-center gap-2'>
-								<Badge variant='outline' class={attendanceClasses[appointment.attendanceStatus]}>
-									{attendanceLabels[appointment.attendanceStatus]}
-								</Badge>
+								{#if appointment.patientName}
+									<Badge variant='outline' class={attendanceClasses[appointment.attendanceStatus]}>
+										{attendanceLabels[appointment.attendanceStatus]}
+									</Badge>
+								{/if}
 								{#if reminderAction(appointment) === 'send'}
 									<Button size='sm' variant='outline' onclick={() => {
 										window.location.href = '/turnos/' + appointment.id + '/recordatorio';

@@ -183,7 +183,7 @@ export const reminderCopy = {
 		skipped: 'Recordatorio omitido.',
 		resendRequired: 'Escribí un motivo para reenviar el recordatorio.',
 		alreadySent: 'Ya se envió un recordatorio para este turno.',
-		notEligible: 'No se puede enviar un recordatorio por WhatsApp a este paciente.',
+		notEligible: '',
 		noPhone: 'El paciente no tiene un número de WhatsApp válido.',
 		consentMissing: 'El paciente no dio consentimiento para recibir recordatorios por WhatsApp.',
 		consentDenied: 'El paciente pidió no recibir mensajes de WhatsApp.'

@@ -15,6 +15,13 @@
       "when": 1793479446041,
       "tag": "0001_high_pet_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793482610904,
+      "tag": "0002_clever_karen_page",
+      "breakpoints": true
     }
   ]
 }
