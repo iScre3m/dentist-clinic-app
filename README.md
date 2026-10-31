@@ -4,14 +4,16 @@ Administrative coordination app for a single dental practice in Argentina.
 It complements Google Calendar; it does not replace it.
 
 **Status:** early scaffold. The database schema, staff authentication, seed
-data, and a read-only dashboard panel exist. Google Calendar sync, patient
-registration, WhatsApp reminders, attendance, and follow-ups are still to
-come. Commands marked _(planned)_ are not implemented yet.
+data, a read-only dashboard panel, and the public patient registration form
+exist. Google Calendar sync, WhatsApp reminders, attendance, and follow-ups
+are still to come. Commands marked _(planned)_ are not implemented yet.
 
 ## What it does
 
 -   Reads appointments from the practice's Google Calendar (read-only).
 -   Links each calendar event to a registered patient by phone number.
+-   Lets patients register themselves at `/registro` with a name, a WhatsApp
+    number, and consent. It is the only public page.
 -   Lets staff send WhatsApp reminders manually through a `wa.me` link.
 -   Records attendance outcomes: confirmed, attended, no-show.
 -   Tracks administrative follow-up tasks for multi-session treatments.
@@ -79,6 +81,7 @@ duplicated. It refuses to run when `NODE_ENV=production`.
 | `pnpm db:generate` | Generate a Drizzle migration from the schema |
 | `pnpm db:migrate` | Apply migrations |
 | `pnpm db:seed` | Create the two staff accounts and synthetic data |
+| `pnpm test:unit` | Vitest unit tests (phone normalization, rate limiting) |
 | `pnpm db:prune` | Delete records older than 90 days _(planned)_ |
 | `pnpm staff:update` | Change a staff name, email, or password _(planned)_ |
 | `pnpm test:e2e` | Playwright end-to-end tests _(planned)_ |
@@ -134,24 +137,36 @@ Short operational notes for whoever runs the app:
 
 -   Development, demos, and tests use synthetic patient data only.
 -   Never commit the database, keys, or real patient data.
--   The only public page is the patient registration form. Everything else
-    requires a staff login.
--   Consent text and version: `templates/consent/consentimiento.es.md`.
+-   The only public page is the patient registration form (`/registro`).
+    Everything else requires a staff login.
+-   Registration normalizes the number to E.164 with `libphonenumber-js`,
+    stores only E.164, and rejects numbers that are not valid mobiles for the
+    chosen country. Argentina's `9` is retried automatically when the patient
+    types the number the way they dial it.
+-   Registration is idempotent by phone number and never reveals whether a
+    number is already registered.
+-   The registration endpoint is rate-limited to 5 attempts per hour per IP.
+    The counter lives in process memory, so it resets on restart.
+-   Consent text and version: `templates/consent/consentimiento.es.md`. The
+    app reads the version from that file; editing the patient-facing text
+    requires bumping it.
 -   WhatsApp message templates: `templates/whatsapp/reminder.es.md`.
 
 ## Project structure
 
 ```text
-src/lib/format.ts          date formatting for America/Argentina/Buenos_Aires
-src/lib/schemas            Valibot schemas (to come)
-src/lib/server/auth.ts     Better Auth configuration
-src/lib/server/db         Drizzle schema and client
-src/lib/server/services    business logic and integrations (to come)
-src/routes                 SvelteKit routes
-scripts                    seed and maintenance scripts
-drizzle                    generated migrations
-tests                      Playwright tests (to come)
-templates                  WhatsApp and consent copy
+src/lib/format.ts               date formatting for America/Argentina/Buenos_Aires
+src/lib/schemas                 Valibot schemas
+src/lib/server/auth.ts          Better Auth configuration
+src/lib/server/consent.ts       consent version and patient-facing text
+src/lib/server/db               Drizzle schema and client
+src/lib/server/services/patients phone normalization and registration
+src/lib/server/rate-limit.ts    in-memory registration rate limit
+src/routes                      SvelteKit routes (`registro` is the public one)
+scripts                         seed and maintenance scripts
+drizzle                         generated migrations
+tests                           Playwright tests (to come)
+templates                       WhatsApp and consent copy
 ```
 
 The project uses SvelteKit 3 conventions: configuration lives in
