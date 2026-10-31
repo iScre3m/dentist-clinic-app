@@ -3,17 +3,17 @@
 Administrative coordination app for a single dental practice in Argentina.
 It complements Google Calendar; it does not replace it.
 
-**Status:** early scaffold. The database schema, staff authentication, seed
-data, a read-only dashboard panel, and the public patient registration form
-exist. Google Calendar sync, WhatsApp reminders, attendance, and follow-ups
-are still to come. Commands marked _(planned)_ are not implemented yet.
+**Status:** MVP implementation. Database schema, staff authentication, seed data, dashboard, patient registration, Google Calendar sync, WhatsApp reminders, attendance, and follow-ups are implemented.
 
 ## What it does
 
 - Reads appointments from the practice's Google Calendar (read-only).
 - Links each calendar event to a registered patient by phone number.
-- Lets patients register themselves at `/registro` with a name, a WhatsApp
-  number, and consent. It is the only public page.
+- Lets patients register themselves at `/` with a name, a WhatsApp
+  number, and consent. It is the only public page. Registered patients
+  appear at `/pacientes`, not on the dashboard: the dashboard lists only
+  appointments synced from Google Calendar, which are matched to patients
+  by phone number during synchronization.
 - Lets staff send WhatsApp reminders manually through a `wa.me` link.
 - Records attendance outcomes: confirmed, attended, no-show.
 - Tracks administrative follow-up tasks for multi-session treatments.
@@ -82,8 +82,8 @@ duplicated. It refuses to run when `NODE_ENV=production`.
 | `pnpm db:migrate`             | Apply migrations                                       |
 | `pnpm db:seed`                | Create the two staff accounts and synthetic data       |
 | `pnpm test:unit`              | Vitest unit tests (phone normalization, rate limiting) |
-| `pnpm db:prune`               | Delete records older than 90 days _(planned)_          |
-| `pnpm staff:update`           | Change a staff name, email, or password _(planned)_    |
+| `pnpm db:prune`               | Delete records older than 90 days                          |
+| `pnpm staff:update`           | Change a staff name, email, or password                |
 | `pnpm test:e2e`               | Playwright end-to-end tests _(planned)_                |
 
 ## Google Calendar (service account)
@@ -137,7 +137,7 @@ Short operational notes for whoever runs the app:
 
 - Development, demos, and tests use synthetic patient data only.
 - Never commit the database, keys, or real patient data.
-- The only public page is the patient registration form (`/registro`).
+- The only public page is the patient registration form (`/`).
   Everything else requires a staff login.
 - Registration normalizes the number to E.164 with `libphonenumber-js`,
   stores only E.164, and rejects numbers that are not valid mobiles for the
@@ -164,7 +164,7 @@ src/lib/server/db               Drizzle schema and client
 src/lib/server/services/patients phone normalization and registration
 src/lib/server/rate-limit.ts    in-memory registration rate limit
 src/lib/utils.ts                `cn` and shadcn prop helper types
-src/routes                      SvelteKit routes (`registro` is the public one)
+src/routes                      SvelteKit routes (`/` is the public registration page)
 scripts                         seed and maintenance scripts
 drizzle                         generated migrations
 tests                           Playwright tests (to come)
