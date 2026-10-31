@@ -10,46 +10,46 @@ are still to come. Commands marked _(planned)_ are not implemented yet.
 
 ## What it does
 
--   Reads appointments from the practice's Google Calendar (read-only).
--   Links each calendar event to a registered patient by phone number.
--   Lets patients register themselves at `/registro` with a name, a WhatsApp
-    number, and consent. It is the only public page.
--   Lets staff send WhatsApp reminders manually through a `wa.me` link.
--   Records attendance outcomes: confirmed, attended, no-show.
--   Tracks administrative follow-up tasks for multi-session treatments.
+- Reads appointments from the practice's Google Calendar (read-only).
+- Links each calendar event to a registered patient by phone number.
+- Lets patients register themselves at `/registro` with a name, a WhatsApp
+  number, and consent. It is the only public page.
+- Lets staff send WhatsApp reminders manually through a `wa.me` link.
+- Records attendance outcomes: confirmed, attended, no-show.
+- Tracks administrative follow-up tasks for multi-session treatments.
 
 It does **not** schedule appointments, send messages automatically, store
 clinical data, or handle billing.
 
 ## Stack
 
--   SvelteKit + Svelte 5 + TypeScript
--   Tailwind CSS + shadcn-svelte
--   SQLite + Drizzle ORM / Drizzle Kit
--   Better Auth (two staff accounts, no signup)
--   Valibot for server-side validation
--   Playwright for end-to-end tests
--   pnpm
+- SvelteKit + Svelte 5 + TypeScript
+- Tailwind CSS + shadcn-svelte
+- SQLite + Drizzle ORM / Drizzle Kit
+- Better Auth (two staff accounts, no signup)
+- Valibot for server-side validation
+- Playwright for end-to-end tests
+- pnpm
 
 ## Requirements
 
--   Node.js (LTS) and pnpm
--   A Google Cloud project with the Calendar API enabled
--   A durable disk path for the SQLite file in production
+- Node.js (LTS) and pnpm
+- A Google Cloud project with the Calendar API enabled
+- A durable disk path for the SQLite file in production
 
 ## Environment variables
 
 Copy `.env.example` to `.env`. Never commit `.env`.
 
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_PATH` | Absolute path to the SQLite file on durable storage |
-| `BETTER_AUTH_SECRET` | Session signing secret |
-| `BETTER_AUTH_URL` | Public base URL for auth |
-| `APP_URL` | Public base URL of the app |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Base64-encoded service-account key |
-| `GOOGLE_CALENDAR_ID` | The practice calendar ID |
-| `FAKE_CALENDAR` | `1` in development and tests to use fixtures |
+| Variable                      | Purpose                                             |
+| ----------------------------- | --------------------------------------------------- |
+| `DATABASE_PATH`               | Absolute path to the SQLite file on durable storage |
+| `BETTER_AUTH_SECRET`          | Session signing secret                              |
+| `BETTER_AUTH_URL`             | Public base URL for auth                            |
+| `APP_URL`                     | Public base URL of the app                          |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Base64-encoded service-account key                  |
+| `GOOGLE_CALENDAR_ID`          | The practice calendar ID                            |
+| `FAKE_CALENDAR`               | `1` in development and tests to use fixtures        |
 
 ## Local setup
 
@@ -71,20 +71,20 @@ duplicated. It refuses to run when `NODE_ENV=production`.
 
 ## Commands
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev` | Start the dev server |
-| `pnpm build` / `pnpm preview` | Production build and preview |
-| `pnpm check` | svelte-check and TypeScript diagnostics |
-| `pnpm lint` | ESLint _(planned)_ |
-| `pnpm format` | Format with Prettier |
-| `pnpm db:generate` | Generate a Drizzle migration from the schema |
-| `pnpm db:migrate` | Apply migrations |
-| `pnpm db:seed` | Create the two staff accounts and synthetic data |
-| `pnpm test:unit` | Vitest unit tests (phone normalization, rate limiting) |
-| `pnpm db:prune` | Delete records older than 90 days _(planned)_ |
-| `pnpm staff:update` | Change a staff name, email, or password _(planned)_ |
-| `pnpm test:e2e` | Playwright end-to-end tests _(planned)_ |
+| Command                       | Purpose                                                |
+| ----------------------------- | ------------------------------------------------------ |
+| `pnpm dev`                    | Start the dev server                                   |
+| `pnpm build` / `pnpm preview` | Production build and preview                           |
+| `pnpm check`                  | svelte-check and TypeScript diagnostics                |
+| `pnpm lint` / `pnpm lint:fix` | ESLint (flat config) and auto-fix                      |
+| `pnpm format`                 | Format with Prettier                                   |
+| `pnpm db:generate`            | Generate a Drizzle migration from the schema           |
+| `pnpm db:migrate`             | Apply migrations                                       |
+| `pnpm db:seed`                | Create the two staff accounts and synthetic data       |
+| `pnpm test:unit`              | Vitest unit tests (phone normalization, rate limiting) |
+| `pnpm db:prune`               | Delete records older than 90 days _(planned)_          |
+| `pnpm staff:update`           | Change a staff name, email, or password _(planned)_    |
+| `pnpm test:e2e`               | Playwright end-to-end tests _(planned)_                |
 
 ## Google Calendar (service account)
 
@@ -121,40 +121,41 @@ until resolved.
 
 Short operational notes for whoever runs the app:
 
--   **Sync fails:** check the dashboard message and the last successful
-    sync time. A `410 GONE` token is handled automatically by a full
-    resync. If the key was revoked or the calendar unshared, sync fails
-    with a clear error.
--   **Rotate the Google key:** create a new key for the service account,
-    update `GOOGLE_SERVICE_ACCOUNT_JSON`, restart the app, then disable the
-    old key.
--   **Reset a staff password:** `pnpm staff:update`. There is no reset
-    email flow.
--   **Backups:** run the backup command on a schedule and keep copies off
-    the server. Test a restore at least once.
+- **Sync fails:** check the dashboard message and the last successful
+  sync time. A `410 GONE` token is handled automatically by a full
+  resync. If the key was revoked or the calendar unshared, sync fails
+  with a clear error.
+- **Rotate the Google key:** create a new key for the service account,
+  update `GOOGLE_SERVICE_ACCOUNT_JSON`, restart the app, then disable the
+  old key.
+- **Reset a staff password:** `pnpm staff:update`. There is no reset
+  email flow.
+- **Backups:** run the backup command on a schedule and keep copies off
+  the server. Test a restore at least once.
 
 ## Data and privacy
 
--   Development, demos, and tests use synthetic patient data only.
--   Never commit the database, keys, or real patient data.
--   The only public page is the patient registration form (`/registro`).
-    Everything else requires a staff login.
--   Registration normalizes the number to E.164 with `libphonenumber-js`,
-    stores only E.164, and rejects numbers that are not valid mobiles for the
-    chosen country. Argentina's `9` is retried automatically when the patient
-    types the number the way they dial it.
--   Registration is idempotent by phone number and never reveals whether a
-    number is already registered.
--   The registration endpoint is rate-limited to 5 attempts per hour per IP.
-    The counter lives in process memory, so it resets on restart.
--   Consent text and version: `templates/consent/consentimiento.es.md`. The
-    app reads the version from that file; editing the patient-facing text
-    requires bumping it.
--   WhatsApp message templates: `templates/whatsapp/reminder.es.md`.
+- Development, demos, and tests use synthetic patient data only.
+- Never commit the database, keys, or real patient data.
+- The only public page is the patient registration form (`/registro`).
+  Everything else requires a staff login.
+- Registration normalizes the number to E.164 with `libphonenumber-js`,
+  stores only E.164, and rejects numbers that are not valid mobiles for the
+  chosen country. Argentina's `9` is retried automatically when the patient
+  types the number the way they dial it.
+- Registration is idempotent by phone number and never reveals whether a
+  number is already registered.
+- The registration endpoint is rate-limited to 5 attempts per hour per IP.
+  The counter lives in process memory, so it resets on restart.
+- Consent text and version: `templates/consent/consentimiento.es.md`. The
+  app reads the version from that file; editing the patient-facing text
+  requires bumping it.
+- WhatsApp message templates: `templates/whatsapp/reminder.es.md`.
 
 ## Project structure
 
 ```text
+src/lib/components/ui           shadcn-svelte components (vendored, read-only)
 src/lib/format.ts               date formatting for America/Argentina/Buenos_Aires
 src/lib/schemas                 Valibot schemas
 src/lib/server/auth.ts          Better Auth configuration
@@ -162,12 +163,20 @@ src/lib/server/consent.ts       consent version and patient-facing text
 src/lib/server/db               Drizzle schema and client
 src/lib/server/services/patients phone normalization and registration
 src/lib/server/rate-limit.ts    in-memory registration rate limit
+src/lib/utils.ts                `cn` and shadcn prop helper types
 src/routes                      SvelteKit routes (`registro` is the public one)
 scripts                         seed and maintenance scripts
 drizzle                         generated migrations
 tests                           Playwright tests (to come)
 templates                       WhatsApp and consent copy
 ```
+
+UI components come from shadcn-svelte and live in `src/lib/components/ui`. Add
+more with `pnpm dlx shadcn-svelte@latest add <component>`; `components.json`
+points its aliases at `#lib`. Generated components import `#lib/utils.js`,
+which resolves through the `#lib/*` subpath import, so no `$lib` alias is
+needed. Keep vendored files close to the registry output and put app-specific
+components outside that folder.
 
 The project uses SvelteKit 3 conventions: configuration lives in
 `vite.config.ts` (there is no `svelte.config.js`), `src/lib` is imported as

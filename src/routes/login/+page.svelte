@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { authClient } from '#lib/auth-client.ts';
+	import { Alert, AlertDescription } from '#lib/components/ui/alert/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import * as Card from '#lib/components/ui/card/index.ts';
+	import Input from '#lib/components/ui/input/input.svelte';
+	import Label from '#lib/components/ui/label/label.svelte';
 
 	let email = $state('');
 	let password = $state('');
@@ -20,7 +26,7 @@
 			return;
 		}
 
-		await goto('/dashboard');
+		await goto(resolve('/(app)/dashboard'));
 	}
 </script>
 
@@ -28,51 +34,49 @@
 	<title>Ingresar · Consultorio</title>
 </svelte:head>
 
-<main class="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
-	<div class="w-full max-w-sm">
-		<h1 class="mb-1 text-xl font-semibold text-slate-900">Consultorio</h1>
-		<p class="mb-8 text-sm text-slate-600">Acceso para el personal del consultorio.</p>
+<main class="bg-muted/40 flex min-h-screen items-center justify-center px-6 py-12">
+	<Card.Root class="w-full max-w-sm">
+		<Card.Header>
+			<Card.Title>Consultorio</Card.Title>
+			<Card.Description>Acceso para el personal del consultorio.</Card.Description>
+		</Card.Header>
 
-		<form class="space-y-4" onsubmit={handleSubmit}>
-			<div>
-				<label for="email" class="mb-1 block text-sm font-medium text-slate-700">Correo</label>
-				<input
-					id="email"
-					name="email"
-					type="email"
-					autocomplete="username"
-					required
-					bind:value={email}
-					class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500"
-				/>
-			</div>
+		<Card.Content>
+			<form class="space-y-4" onsubmit={handleSubmit}>
+				<div class="space-y-2">
+					<Label for="email">Correo</Label>
+					<Input
+						id="email"
+						name="email"
+						type="email"
+						autocomplete="username"
+						required
+						bind:value={email}
+					/>
+				</div>
 
-			<div>
-				<label for="password" class="mb-1 block text-sm font-medium text-slate-700">
-					Contraseña
-				</label>
-				<input
-					id="password"
-					name="password"
-					type="password"
-					autocomplete="current-password"
-					required
-					bind:value={password}
-					class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500"
-				/>
-			</div>
+				<div class="space-y-2">
+					<Label for="password">Contraseña</Label>
+					<Input
+						id="password"
+						name="password"
+						type="password"
+						autocomplete="current-password"
+						required
+						bind:value={password}
+					/>
+				</div>
 
-			{#if error}
-				<p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>
-			{/if}
+				{#if error}
+					<Alert variant="destructive">
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				{/if}
 
-			<button
-				type="submit"
-				disabled={pending}
-				class="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-			>
-				{pending ? 'Ingresando…' : 'Ingresar'}
-			</button>
-		</form>
-	</div>
+				<Button type="submit" class="w-full" disabled={pending}>
+					{pending ? 'Ingresando…' : 'Ingresar'}
+				</Button>
+			</form>
+		</Card.Content>
+	</Card.Root>
 </main>

@@ -1,0 +1,7 @@
+# Generated or hand-maintained content that Prettier should not rewrite.
+AGENTS.md
+drizzle/
+templates/
+.svelte-kit/
+build/
+pnpm-lock.yaml

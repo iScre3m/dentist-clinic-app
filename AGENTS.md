@@ -142,10 +142,11 @@ Phone normalization:
 
 -   Normalize every number on save with `libphonenumber-js`, using the
     country selected for the patient (default `AR`). Store only E.164,
-    for example `+5491155555555` or `+5215512345678`.
+    for example `+5491155555555` or `+525512345678`.
 -   Let the library apply each country's mobile rules. Argentina needs the
-    `9` after the country code (`+54 9 11 ...`); Mexico uses the `1`
-    (`+52 1 ...`). Never hardcode one country's rule for all patients.
+    `9` after the country code (`+54 9 11 ...`); Mexico dropped its `1` and
+    normalizes to `+52 55 ...`. Never hardcode one country's rule for all
+    patients.
 -   Reject numbers that are not valid mobile numbers for their country,
     and explain why instead of saving a guess.
 -   The same E.164 value is used for calendar matching, duplicate
