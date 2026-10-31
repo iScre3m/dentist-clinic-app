@@ -19,6 +19,7 @@
 "db:prune": "tsx scripts/prune.ts",
 "staff:update": "tsx scripts/staff-update.ts",
 "test:unit": "vitest run",
+"test:e2e": "playwright test",
 		"format": "prettier --write ."
 	},
 	"devDependencies": {

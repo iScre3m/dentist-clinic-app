@@ -84,7 +84,7 @@ duplicated. It refuses to run when `NODE_ENV=production`.
 | `pnpm test:unit`              | Vitest unit tests (phone normalization, rate limiting) |
 | `pnpm db:prune`               | Delete records older than 90 days                          |
 | `pnpm staff:update`           | Change a staff name, email, or password                |
-| `pnpm test:e2e`               | Playwright end-to-end tests _(planned)_                |
+| `pnpm test:e2e`               | Playwright end-to-end tests                            |
 
 ## Google Calendar (service account)
 
