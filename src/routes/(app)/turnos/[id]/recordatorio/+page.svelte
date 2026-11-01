@@ -31,9 +31,14 @@
 
 	let { data, form }: { data: RecordatorioData; form: PageProps['form'] } = $props();
 
-	const { appointment, message, templateKey, reminderRecord, canResend } = data;
+	const { appointment, message, templateKey, reminderRecord, canResend } = $derived(data);
 
-	let editedMessage = $state(message);
+	// editedMessage is user-editable state seeded from the server-rendered message.
+	// It is read once at init through a closure so the compiler does not warn about
+	// capturing the initial value of the derived `message`; the assistant can then
+	// change the text before opening WhatsApp.
+	const seedMessage = () => message;
+	let editedMessage = $state(seedMessage());
 	let copied = $state(false);
 
 	async function copyMessage() {
@@ -64,22 +69,22 @@
 	<title>Recordatorio · Consultorio</title>
 </svelte:head>
 
-<div class='space-y-6'>
-	<header class='flex items-center justify-between gap-4'>
+<div class="space-y-6">
+	<header class="flex items-center justify-between gap-4">
 		<div>
-			<button class='text-sm text-muted-foreground hover:text-foreground' onclick={goBack}>
+			<button class="text-sm text-muted-foreground hover:text-foreground" onclick={goBack}>
 				← Volver al panel
 			</button>
-			<h1 class='text-xl font-semibold mt-1'>Recordatorio de turno</h1>
-			<p class='text-muted-foreground text-sm'>
+			<h1 class="text-xl font-semibold mt-1">Recordatorio de turno</h1>
+			<p class="text-muted-foreground text-sm">
 				{appointment.patientName ?? 'Paciente'} · {appointment.patientPhone ?? 'Sin número'}
 			</p>
 		</div>
-		<span class='text-xs text-muted-foreground'>Plantilla: {templateKey}</span>
+		<span class="text-xs text-muted-foreground">Plantilla: {templateKey}</span>
 	</header>
 
 	{#if form?.error}
-		<div class='rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800'>
+		<div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
 			{form.error}
 		</div>
 	{/if}
@@ -93,19 +98,18 @@
 		</Card.Header>
 		<Card.Content>
 			<textarea
-				id='message'
-				rows='6'
+				id="message"
+				rows="6"
 				bind:value={editedMessage}
-				class='w-full font-mono text-sm leading-relaxed p-3 bg-muted border border-input rounded-md'
-				spellCheck='false'
-			>
+				class="w-full font-mono text-sm leading-relaxed p-3 bg-muted border border-input rounded-md"
+				spellCheck="false">
 {message}
 			</textarea>
-			<div class='mt-3 flex items-center gap-2'>
-				<Button type='button' size='sm' variant='outline' onclick={copyMessage} disabled={copied}>
+			<div class="mt-3 flex items-center gap-2">
+				<Button type="button" size="sm" variant="outline" onclick={copyMessage} disabled={copied}>
 					{copied ? 'Copiado' : reminderCopy.button.copy}
 				</Button>
-				<span class='text-xs text-muted-foreground'>
+				<span class="text-xs text-muted-foreground">
 					Si no se pudo copiar, seleccioná el texto de arriba.
 				</span>
 			</div>
@@ -117,14 +121,14 @@
 			<Card.Title>Abrir en WhatsApp</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			<p class='text-sm text-muted-foreground mb-3'>
+			<p class="text-sm text-muted-foreground mb-3">
 				Hacé clic en el enlace para abrir WhatsApp con el mensaje ya escrito. El envío lo hace el
 				asistente desde su propia app de WhatsApp.
 			</p>
-			<Button type='button' size='sm' variant='default' class='w-full' onclick={openWhatsApp}>
+			<Button type="button" size="sm" variant="default" class="w-full" onclick={openWhatsApp}>
 				Abrir en WhatsApp
 			</Button>
-			<p class='text-xs text-muted-foreground mt-2'>
+			<p class="text-xs text-muted-foreground mt-2">
 				Se abre en una nueva ventana. El enlace usa solo dígitos y el mensaje codificado.
 			</p>
 		</Card.Content>
@@ -136,49 +140,54 @@
 		</Card.Header>
 		<Card.Content>
 			{#if reminderRecord.status === 'prepared'}
-				<form method='POST' action='?/marcarEnviado' use:enhance class='flex items-center gap-2'>
-					<input type='hidden' name='appointmentId' value={appointment.id} />
-					<Button type='submit' size='sm'>{reminderCopy.button.sent}</Button>
+				<form method="POST" action="?/marcarEnviado" use:enhance class="flex items-center gap-2">
+					<input type="hidden" name="appointmentId" value={appointment.id} />
+					<Button type="submit" size="sm">{reminderCopy.button.sent}</Button>
 				</form>
-				<form method='POST' action='?/omitir' use:enhance class='flex items-center gap-2'>
-					<input type='hidden' name='appointmentId' value={appointment.id} />
-					<Button type='submit' size='sm' variant='outline'>{reminderCopy.button.skipped}</Button>
+				<form method="POST" action="?/omitir" use:enhance class="flex items-center gap-2">
+					<input type="hidden" name="appointmentId" value={appointment.id} />
+					<Button type="submit" size="sm" variant="outline">{reminderCopy.button.skipped}</Button>
 				</form>
 				{#if canResend}
-					<form method='POST' action='?/reenviar' use:enhance class='mt-3 flex flex-wrap items-center gap-2'>
-						<input type='hidden' name='appointmentId' value={appointment.id} />
-						<Label for={'resent-reason-' + appointment.id} class='sr-only'>
+					<form
+						method="POST"
+						action="?/reenviar"
+						use:enhance
+						class="mt-3 flex flex-wrap items-center gap-2"
+					>
+						<input type="hidden" name="appointmentId" value={appointment.id} />
+						<Label for={'resent-reason-' + appointment.id} class="sr-only">
 							{reminderCopy.label.resendReason}
 						</Label>
 						<input
 							id={'resent-reason-' + appointment.id}
-							name='resent_reason'
+							name="resent_reason"
 							placeholder={reminderCopy.label.resendReason}
-							class='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm outline-none focus-visible:ring-3 w-48'
+							class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm outline-none focus-visible:ring-3 w-48"
 							required
 						/>
-						<Button type='submit' size='sm'>{reminderCopy.button.resend}</Button>
+						<Button type="submit" size="sm">{reminderCopy.button.resend}</Button>
 					</form>
-					<p class='text-xs text-muted-foreground mt-1'>{reminderCopy.message.resendRequired}</p>
+					<p class="text-xs text-muted-foreground mt-1">{reminderCopy.message.resendRequired}</p>
 				{/if}
 			{:else if reminderRecord.status === 'sent'}
-				<div class='text-sm text-emerald-800 flex items-center gap-2'>
-					<span class='text-emerald-400' role='img'>✓</span>
+				<div class="text-sm text-emerald-800 flex items-center gap-2">
+					<span class="text-emerald-400" role="img">✓</span>
 					{reminderCopy.message.sent}
 				</div>
 				{#if reminderRecord.resentReason}
-					<p class='text-xs text-muted-foreground mt-1'>
+					<p class="text-xs text-muted-foreground mt-1">
 						Reenviado: {reminderRecord.resentReason}
 					</p>
 				{/if}
 			{:else if reminderRecord.status === 'skipped'}
-				<div class='text-sm text-amber-800 flex items-center gap-2'>
-					<span class='text-amber-400' role='img'>⚠</span>
+				<div class="text-sm text-amber-800 flex items-center gap-2">
+					<span class="text-amber-400" role="img">⚠</span>
 					{reminderCopy.message.skipped}
 				</div>
 			{/if}
 			{#if reminderRecord.recordedAt}
-				<p class='text-xs text-muted-foreground mt-2'>
+				<p class="text-xs text-muted-foreground mt-2">
 					Registrado el {new Date(reminderRecord.recordedAt).toLocaleString('es-AR')}
 				</p>
 			{/if}

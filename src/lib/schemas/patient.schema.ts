@@ -1,10 +1,5 @@
 import * as v from 'valibot';
 
-/**
- * Registration is the only patient-facing form. It collects the minimum:
- * a name for messages, a WhatsApp number, the country used to normalize it,
- * and the consent checkbox.
- */
 export const registrationSchema = v.object({
 	firstName: v.pipe(
 		v.string(),
@@ -36,11 +31,6 @@ export const registrationSchema = v.object({
 
 export type RegistrationInput = v.InferOutput<typeof registrationSchema>;
 
-/**
- * Staff corrections to an existing patient. Staff never create patients, so
- * there is no create schema: the only way in is the public registration form.
- * The phone goes through the same normalization as registration.
- */
 export const staffEditSchema = v.object({
 	name: v.pipe(
 		v.string(),
@@ -71,10 +61,6 @@ export const staffEditSchema = v.object({
 
 export type StaffEditInput = v.InferOutput<typeof staffEditSchema>;
 
-/**
- * A consent change recorded by staff. `denied` is a withdrawal and stamps the
- * opt-out date; `granted` is an explicit re-authorization.
- */
 export const consentChangeSchema = v.object({
 	consent: v.picklist(['granted', 'denied'], 'Elegí una opción.')
 });

@@ -9,30 +9,38 @@
 	import { followUpsCopy as copy } from '#lib/copy.ts';
 	import type { PageData } from './$types';
 
-	type ActionForm = { success?: boolean; action?: string; error?: string; values?: Record<string, string> } | null;
+	type ActionForm = {
+		success?: boolean;
+		action?: string;
+		error?: string;
+		values?: Record<string, string>;
+	} | null;
 
 	let { data, form }: { data: PageData; form: ActionForm } = $props();
 
 	let openForm = $state(false);
 	let description = $state('');
-	let dueDate = $state(data.today);
+	let dueDate = $state('');
 	let contactDates: Record<string, string> = $state({});
 
 	const patientOptions = $derived(
 		(data.patients ?? []).map((p) => ({ value: p.id, label: p.name }))
 	);
-	let patientValue = $state<string>(patientOptions[0]?.value ?? '');
+	let patientValue = $state<string>('');
 
 	$effect(() => {
 		if (openForm && patientOptions.length && !patientValue) {
 			patientValue = patientOptions[0].value;
+		}
+		if (openForm && !dueDate) {
+			dueDate = data.today;
 		}
 	});
 
 	function closeForm() {
 		openForm = false;
 		description = '';
-		dueDate = data.today;
+		dueDate = '';
 		patientValue = '';
 	}
 
@@ -56,19 +64,19 @@
 		<Button size="sm" onclick={() => (openForm = true)}>Nuevo seguimiento</Button>
 	</header>
 
-	{#if form?.success && form.action === "create"}
+	{#if form?.success && form.action === 'create'}
 		<div class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
 			{copy.messages.created}
 		</div>
-	{:else if form?.success && form.action === "recordContact"}
+	{:else if form?.success && form.action === 'recordContact'}
 		<div class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
 			{copy.messages.contactRecorded}
 		</div>
-	{:else if form?.success && form.action === "complete"}
+	{:else if form?.success && form.action === 'complete'}
 		<div class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
 			{copy.messages.completed}
 		</div>
-	{:else if form?.success && form.action === "cancel"}
+	{:else if form?.success && form.action === 'cancel'}
 		<div class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
 			{copy.messages.cancelled}
 		</div>
@@ -99,12 +107,7 @@
 					</div>
 					<div class="space-y-2">
 						<Label for="dueDate">{copy.create.dueDateLabel}</Label>
-						<Input
-							id="dueDate"
-							name="dueDate"
-							type="date"
-							bind:value={dueDate}
-						/>
+						<Input id="dueDate" name="dueDate" type="date" bind:value={dueDate} />
 					</div>
 					<div class="space-y-2">
 						<Label for="patientId">{copy.create.patientLabel}</Label>
@@ -166,18 +169,27 @@
 								</div>
 							</div>
 							<div class="flex flex-wrap items-center gap-2">
-								<form method="POST" action="?/recordContact" use:enhance class="flex items-center gap-2">
+								<form
+									method="POST"
+									action="?/recordContact"
+									use:enhance
+									class="flex items-center gap-2"
+								>
 									<input type="hidden" name="followUpId" value={task.id} />
-									<Label for={"contact-" + task.id} class="sr-only">{copy.list.contactDateLabel}</Label>
+									<Label for={'contact-' + task.id} class="sr-only"
+										>{copy.list.contactDateLabel}</Label
+									>
 									<Input
-										id={"contact-" + task.id}
+										id={'contact-' + task.id}
 										name="contactDate"
 										type="date"
 										class="w-40"
 										value={contactDates[task.id] ?? data.today}
 										oninput={(e) => (contactDates[task.id] = e.currentTarget.value)}
 									/>
-									<Button type="submit" size="sm" variant="outline">{copy.list.recordContact}</Button>
+									<Button type="submit" size="sm" variant="outline"
+										>{copy.list.recordContact}</Button
+									>
 								</form>
 								<form method="POST" action="?/complete" use:enhance class="inline">
 									<input type="hidden" name="followUpId" value={task.id} />

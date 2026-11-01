@@ -2,27 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { isCountryCode, normalizeMobile } from './phone.ts';
 
 describe('normalizeMobile', () => {
-	it('adds the Argentine 9 to a national mobile number', () => {
-		expect(normalizeMobile('11 5555-0001', 'AR')).toEqual({ ok: true, e164: '+5491155550001' });
-	});
-
-	it('handles the leading 0 people dial locally', () => {
-		expect(normalizeMobile('011 5555-0001', 'AR')).toEqual({ ok: true, e164: '+5491155550001' });
-	});
-
-	it('fixes an international Argentine number missing the 9', () => {
-		expect(normalizeMobile('+54 11 5555-0001', 'AR')).toEqual({
-			ok: true,
-			e164: '+5491155550001'
-		});
-	});
-
-	it('accepts an already normalized Argentine number', () => {
+	it('accepts an already normalized Argentine mobile number', () => {
 		expect(normalizeMobile('+54 9 11 5555-0001', 'AR')).toEqual({
 			ok: true,
 			e164: '+5491155550001'
 		});
 		expect(normalizeMobile('5491155550001', 'AR')).toEqual({ ok: true, e164: '+5491155550001' });
+	});
+
+	it('rejects an Argentine number missing the mobile 9 as a landline', () => {
+		expect(normalizeMobile('11 5555-0001', 'AR')).toEqual({ ok: false, reason: 'not-mobile' });
+		expect(normalizeMobile('011 5555-0001', 'AR')).toEqual({ ok: false, reason: 'not-mobile' });
+		expect(normalizeMobile('+54 11 5555-0001', 'AR')).toEqual({ ok: false, reason: 'not-mobile' });
 	});
 
 	it('normalizes a Mexican mobile number', () => {

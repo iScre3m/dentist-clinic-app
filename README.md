@@ -37,7 +37,44 @@ clinical data, or handle billing.
 - A Google Cloud project with the Calendar API enabled
 - A durable disk path for the SQLite file in production
 
+## Google Calendar setup
+
+### Get `GOOGLE_SERVICE_ACCOUNT_JSON`
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project (e.g. `dentist-appointment-app`) and select it.
+3. Open the [Google Calendar API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) and enable it.
+4. Open [Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts) → Create service account (e.g. `dentist-calendar-service`).
+5. Open the service account → Keys tab → Add key → Create new key → JSON. Download the file.
+6. Base64-encode the JSON file and set it as `GOOGLE_SERVICE_ACCOUNT_JSON` in your `.env`.
+
+### Get `GOOGLE_CALENDAR_ID`
+
+1. Open [Google Calendar](https://calendar.google.com/).
+2. Create or use a separate calendar for the clinic (recommended).
+3. Calendar settings → Settings and sharing → Integrate calendar → Copy the **Calendar ID** value.
+4. Set it as `GOOGLE_CALENDAR_ID` in your `.env`.
+
+### Share the calendar with the service account
+
+1. In calendar Settings and sharing → Share with specific people or groups → Add people and groups.
+2. Add the `client_email` from the downloaded JSON (e.g. `dentist-calendar-service@...iam.gserviceaccount.com`).
+3. Grant permission **See all event details** (read-only).
+4. Click Send.
+
+### Security precautions
+
+- Add `.env` and the service account JSON file to `.gitignore`.
+- Never commit your private key to GitHub.
+- Never share credentials in chats or public repositories.
+- Configure environment variables securely on your hosting platform.
+
+### Test mode
+
+Set `FAKE_CALENDAR=1` in development to use fixtures instead of real Google Calendar.
+
 ## Docker (cross-platform)
+
 For running without installing Node.js locally, see [DOCKER.md](DOCKER.md).
 
 ## Environment variables
@@ -82,25 +119,25 @@ duplicated. It refuses to run when `NODE_ENV=production`.
 | `pnpm format`                 | Format with Prettier                                   |
 | `pnpm db:generate`            | Generate a Drizzle migration from the schema           |
 | `pnpm db:migrate`             | Apply migrations                                       |
-| `pnpm db:seed`                | Create the two staff accounts and synthetic data       |
+| `pnpm db:seed`                | Create the one staff account and synthetic data        |
 | `pnpm test:unit`              | Vitest unit tests (phone normalization, rate limiting) |
-| `pnpm db:prune`               | Delete records older than 90 days                          |
+| `pnpm db:prune`               | Delete records older than 90 days                      |
 | `pnpm staff:update`           | Change a staff name, email, or password                |
 | `pnpm test:e2e`               | Playwright end-to-end tests                            |
 
 ## Google Calendar (service account)
 
+For full setup details, see [Google Calendar setup](#google-calendar-setup) above.
+
 1. Create a Google Cloud project and enable the Calendar API.
 2. Create a service account and download its JSON key.
-3. Share the practice calendar with the service-account email, permission
-   **See all event details** (read-only).
+3. Share the practice calendar with the service-account email, permission **See all event details** (read-only).
 4. Store the key base64-encoded in `GOOGLE_SERVICE_ACCOUNT_JSON`.
 5. Set `GOOGLE_CALENDAR_ID` to the calendar ID.
 
 No OAuth consent screen, no refresh token, and no callback route.
 
-Sync runs only when staff trigger it: a **Sync now** button or opening the
-app. There is no scheduler.
+Sync runs only when staff trigger it: a **Sync now** button or opening the app. There is no scheduler.
 
 ## Database and backups
 
@@ -169,7 +206,7 @@ src/lib/utils.ts                `cn` and shadcn prop helper types
 src/routes                      SvelteKit routes (`/` is the public registration page)
 scripts                         seed and maintenance scripts
 drizzle                         generated migrations
-tests                           Playwright tests (to come)
+tests                           Playwright end-to-end tests
 templates                       WhatsApp and consent copy
 ```
 
