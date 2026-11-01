@@ -106,8 +106,8 @@ export const actions: Actions = {
 		const appointmentId = formData.get('appointmentId')?.toString();
 		const phone = formData.get('phone')?.toString();
 		if (!appointmentId || !phone) return { success: false, error: 'Faltan datos' };
-		const result = await normalizeMobile(phone, 'AR');
-		if (!result.ok) return { success: false, error: 'Nómero invólido' };
+		const result = await normalizeMobile(phone);
+		if (!result.ok) return { success: false, error: 'Número inválido' };
 		const patientRows = await db
 			.select()
 			.from(patients)
