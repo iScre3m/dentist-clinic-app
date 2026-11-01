@@ -122,7 +122,7 @@ export class GoogleCalendarService {
 		const match = description.match(/Paciente:\s*([+\d\s\-()]+)/i);
 		if (!match) return null;
 		const rawNumber = match[1].trim();
-		const result = await normalizeMobile(rawNumber, 'AR');
+		const result = await normalizeMobile(rawNumber);
 		if (!result.ok) return null;
 		const patientRows = await db
 			.select({ id: patients.id })

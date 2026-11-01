@@ -15,13 +15,15 @@ export const registrationSchema = v.object({
 		v.maxLength(80, 'El apellido es demasiado largo.'),
 		v.regex(/^[\p{L}\s'-]+$/u, 'Solo letras, espacios y apóstrofos.')
 	),
-	country: v.pipe(v.string(), v.regex(/^[A-Z]{2}$/, 'Elegí un país de la lista.')),
 	phone: v.pipe(
 		v.string(),
 		v.trim(),
 		v.minLength(6, 'Escribí tu número de WhatsApp.'),
 		v.maxLength(30, 'El número es demasiado largo.'),
-		v.regex(/^\d+$/, 'Solo números.')
+		v.regex(
+			/^\+?[\d\s()-]+$/,
+			'El número solo puede tener números, espacios, guiones o paréntesis.'
+		)
 	),
 	consent: v.pipe(
 		v.boolean(),
@@ -38,7 +40,6 @@ export const staffEditSchema = v.object({
 		v.minLength(2, 'Escribí el nombre del paciente.'),
 		v.maxLength(80, 'El nombre es demasiado largo.')
 	),
-	country: v.pipe(v.string(), v.regex(/^[A-Z]{2}$/, 'Elegí un país de la lista.')),
 	phone: v.pipe(
 		v.string(),
 		v.trim(),

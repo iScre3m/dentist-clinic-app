@@ -47,3 +47,26 @@ test('registration form rejects invalid name', async ({ page }) => {
 	await page.getByRole('button', { name: 'Registrarme' }).click();
 	await expect(page.getByText('Solo letras, espacios y apóstrofos.')).toBeVisible();
 });
+
+test('registration form explains why a landline is rejected', async ({ page }) => {
+	await page.goto('/');
+	await page.getByLabel('Nombre').fill('Ana');
+	await page.getByLabel('Apellido').fill('Perez');
+	await page.getByLabel('Número de WhatsApp').fill('11 5555 0001');
+	await page.getByLabel(/Acepto recibir/).check();
+	await page.getByRole('button', { name: 'Registrarme' }).click();
+	await expect(page.getByRole('alert')).toContainText(
+		'Necesitamos un número de celular, porque WhatsApp no funciona con líneas fijas.'
+	);
+});
+
+test('registration form accepts a locally dialed mobile number', async ({ page }) => {
+	await page.goto('/');
+	await page.getByLabel('Nombre').fill('Ana');
+	await page.getByLabel('Apellido').fill('Perez');
+	await page.getByLabel('Número de WhatsApp').fill('11 15 7777 0001');
+	await page.getByLabel(/Acepto recibir/).check();
+	await page.getByRole('button', { name: 'Registrarme' }).click();
+	await expect(page.getByRole('alert')).toContainText('Listo. Recibimos tu registro.');
+	await expect(page.getByRole('button', { name: 'Listo. Recibimos tu registro.' })).toBeDisabled();
+});

@@ -31,8 +31,8 @@ export const FIXTURES: Array<unknown> = [
 	},
 
 	/**
-	 * Evento con paciente Mateo Ramírez (número mexicano +52 55 12345678),
-	 * sin descripción de paciente → debe aparecer como sin paciente.
+	 * Evento sin descripción de paciente → sin paciente, aparece en la lista
+	 * "Eventos sin paciente".
 	 */
 	{
 		id: 'dev-event-2',

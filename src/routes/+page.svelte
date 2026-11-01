@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
+	import { Alert, AlertDescription } from '#lib/components/ui/alert/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import * as Card from '#lib/components/ui/card/index.ts';
 	import Input from '#lib/components/ui/input/input.svelte';
@@ -68,7 +69,11 @@
 					action="?/register"
 					class="space-y-4"
 					onsubmit={() => (submitted = true)}
-					use:enhance
+					use:enhance={() => async ({ update }) => {
+						// The page has no server data to refresh. Keeping the result
+						// on screen lets the patient see the confirmation.
+						await update({ reset: false, refreshAll: false, navigate: false });
+					}}
 				>
 					<div class="space-y-2">
 						<Label for="firstName">Nombre</Label>
@@ -113,25 +118,6 @@
 					</div>
 
 					<div class="space-y-2">
-						<Label for="country">País</Label>
-						<select
-							id="country"
-							name="country"
-							class="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-3"
-							disabled={form?.success}
-						>
-							{#each data.countries as country (country.code)}
-								<option
-									value={country.code}
-									selected={country.code === (form?.values?.country ?? data.defaultCountry)}
-								>
-									{country.name}
-								</option>
-							{/each}
-						</select>
-					</div>
-
-					<div class="space-y-2">
 						<Label for="phone">Número de WhatsApp</Label>
 						<Input
 							id="phone"
@@ -141,19 +127,18 @@
 							required
 							maxlength={30}
 							autocomplete="tel"
-							placeholder="11 5555 0001"
+							placeholder="11 15 5555 0001"
 							aria-describedby="phone-hint"
 							bind:value={phone}
-							oninput={(e) => (phone = e.currentTarget.value.replace(/[^\d]/g, ''))}
+							oninput={(e) => (phone = e.currentTarget.value.replace(/[^\d\s()+-]/g, ''))}
 							disabled={form?.success}
 						/>
-						{#if /[^\d]/.test(phone)}
-							<p id="phone-error" class="text-red-600 text-xs mt-1">Solo números.</p>
-						{:else if submitted && !form?.success && !phone.trim()}
+						{#if submitted && !form?.success && !phone.trim()}
 							<p id="phone-error" class="text-red-600 text-xs mt-1">Campo obligatorio.</p>
 						{/if}
 						<p id="phone-hint" class="text-muted-foreground text-xs">
-							Escribilo sin el 0 inicial y sin el código de país. Tiene que ser un celular.
+							Escribilo como lo marcás, por ejemplo 11 15 5555 0001. Solo aceptamos celulares
+							argentinos.
 						</p>
 					</div>
 
@@ -191,6 +176,12 @@
 							</div>
 						</details>
 					</div>
+
+					{#if form?.message}
+						<Alert variant={form.success ? 'default' : 'destructive'}>
+							<AlertDescription>{form.message}</AlertDescription>
+						</Alert>
+					{/if}
 
 					<Button type="submit" class="w-full" disabled={form?.success}>
 						{form?.success ? 'Listo. Recibimos tu registro.' : 'Registrarme'}

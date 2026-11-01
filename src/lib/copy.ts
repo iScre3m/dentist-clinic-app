@@ -96,12 +96,10 @@ export const followUpsCopy = {
 /** Why a WhatsApp number was rejected, shared by every phone form. */
 export function phoneFailureMessage(reason: string): string {
 	switch (reason) {
-		case 'invalid-country':
-			return 'Elegí un país de la lista.';
 		case 'not-mobile':
 			return 'Necesitamos un número de celular, porque WhatsApp no funciona con líneas fijas.';
 		default:
-			return 'El número no parece válido para el país elegido. Revisá el código de área y el número.';
+			return 'El número no parece válido. Solo aceptamos celulares argentinos; revisá el código de área y el número.';
 	}
 }
 
@@ -146,7 +144,6 @@ export const patientsCopy = {
 		editTitle: 'Editar datos',
 		editNameLabel: 'Nombre y apellido',
 		editPhoneLabel: 'Número de WhatsApp',
-		editCountryLabel: 'País del número',
 		editPhoneHint: 'Se guarda normalizado al formato internacional, por ejemplo +54 9 11 5555-0001.',
 		editEmailLabel: 'Correo (opcional)',
 		editEmailHint: 'Dejalo vacío si el paciente no dio un correo.',

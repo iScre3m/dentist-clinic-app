@@ -1,7 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { phoneFailureMessage } from '#lib/copy.ts';
-import { countries } from '#lib/server/countries.ts';
 import { registrationSchema } from '#lib/schemas/patient.schema.ts';
 import { CONSENT_TEXT, CONSENT_VERSION } from '#lib/server/consent.ts';
 import { checkRateLimit } from '#lib/server/rate-limit.ts';
@@ -11,8 +10,6 @@ import type { Actions, PageServerLoad } from './$types.ts';
 const REGISTRATIONS_PER_HOUR = 5;
 
 export const load: PageServerLoad = () => ({
-	countries,
-	defaultCountry: 'AR',
 	consentText: CONSENT_TEXT,
 	consentVersion: CONSENT_VERSION
 });
@@ -23,7 +20,6 @@ export const actions: Actions = {
 		const values = {
 			firstName: String(form.get('firstName') ?? ''),
 			lastName: String(form.get('lastName') ?? ''),
-			country: String(form.get('country') ?? 'AR'),
 			phone: String(form.get('phone') ?? '')
 		};
 
@@ -56,7 +52,7 @@ export const actions: Actions = {
 		return {
 			success: true,
 			message: 'Listo. Recibimos tu registro.',
-			values: { firstName: '', lastName: '', country: values.country, phone: '' }
+			values: { firstName: '', lastName: '', phone: '' }
 		};
 	}
 };

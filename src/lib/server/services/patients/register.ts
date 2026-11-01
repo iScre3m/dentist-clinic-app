@@ -3,9 +3,9 @@ import { CONSENT_VERSION } from '#lib/server/consent.ts';
 import { db } from '#lib/server/db/index.ts';
 import { patients } from '#lib/server/db/schema.ts';
 import type { RegistrationInput } from '#lib/schemas/patient.schema.ts';
-import { isCountryCode, normalizeMobile, type PhoneFailure } from './phone.ts';
+import { normalizeMobile, type PhoneFailure } from './phone.ts';
 
-export type RegisterFailure = PhoneFailure | 'invalid-country';
+export type RegisterFailure = PhoneFailure;
 export type RegisterResult = { ok: true } | { ok: false; reason: RegisterFailure };
 
 /**
@@ -18,11 +18,7 @@ export type RegisterResult = { ok: true } | { ok: false; reason: RegisterFailure
  * decision.
  */
 export async function registerPatient(input: RegistrationInput): Promise<RegisterResult> {
-	if (!isCountryCode(input.country)) {
-		return { ok: false, reason: 'invalid-country' };
-	}
-
-	const phone = normalizeMobile(input.phone, input.country);
+	const phone = normalizeMobile(input.phone);
 	if (!phone.ok) {
 		return { ok: false, reason: phone.reason };
 	}

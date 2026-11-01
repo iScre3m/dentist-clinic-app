@@ -4,9 +4,9 @@ import { appointments, patients } from '#lib/server/db/schema.ts';
 import { localDateKey } from '#lib/format.ts';
 import type { StaffEditInput } from '#lib/schemas/patient.schema.ts';
 import { and, count, eq, gte, isNull, ne, or } from 'drizzle-orm';
-import { isCountryCode, normalizeMobile, type PhoneFailure } from './phone.ts';
+import { normalizeMobile, type PhoneFailure } from './phone.ts';
 
-export type StaffFailure = PhoneFailure | 'invalid-country' | 'phone-taken' | 'not-found';
+export type StaffFailure = PhoneFailure | 'phone-taken' | 'not-found';
 export type StaffResult = { ok: true; phoneChanged?: boolean } | { ok: false; reason: StaffFailure };
 export type VerifyResult =
 	| { ok: true; alreadyVerified: boolean }
@@ -42,9 +42,7 @@ export async function updateContact(patientId: string, input: StaffEditInput): P
 	const current = await getPatient(patientId);
 	if (!current) return { ok: false, reason: 'not-found' };
 
-	if (!isCountryCode(input.country)) return { ok: false, reason: 'invalid-country' };
-
-	const phone = normalizeMobile(input.phone, input.country);
+	const phone = normalizeMobile(input.phone);
 	if (!phone.ok) return { ok: false, reason: phone.reason };
 
 	const phoneChanged = phone.e164 !== current.phone;

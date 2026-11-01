@@ -123,8 +123,7 @@ Support the minimum information needed for appointment coordination:
     unique, and is never used for matching.
 -   WhatsApp phone number in E.164 format. This is the patient's unique
     identifier and is required; there is no patient account or
-    self-registration. International numbers are supported, not only
-    Argentine ones.
+    self-registration. Only Argentine mobile numbers are accepted.
 -   Email address, if useful and provided.
 -   WhatsApp consent status and relevant consent/opt-out information.
 -   Links to the patient's appointments and follow-up tasks.
@@ -139,15 +138,14 @@ Unverified is shown as a badge, never as a block.
 
 Phone normalization:
 
--   Normalize every number on save with `libphonenumber-js`, using the
-    country selected for the patient (default `AR`). Store only E.164,
-    for example `+5491155555555` or `+525512345678`.
--   Let the library apply each country's mobile rules. Argentina needs the
-    `9` after the country code (`+54 9 11 ...`); Mexico dropped its `1` and
-    normalizes to `+52 55 ...`. Never hardcode one country's rule for all
-    patients.
--   Reject numbers that are not valid mobile numbers for their country,
-    and explain why instead of saving a guess.
+-   Normalize every number on save with `libphonenumber-js` for Argentina.
+    Store only E.164, for example `+5491155555555`.
+-   Apply Argentina's mobile rule: mobile numbers carry the `9` after the
+    country code (`+54 9 11 ...`). The form accepts the number as the
+    patient dials it (for example `11 15 5555 0001`) and normalizes it to
+    E.164. There is no country selector.
+-   Reject numbers that are not valid Argentine mobile numbers, and explain
+    why instead of saving a guess.
 -   The same E.164 value is used for calendar matching, duplicate
     detection, and the WhatsApp link, so those three can never disagree.
 
