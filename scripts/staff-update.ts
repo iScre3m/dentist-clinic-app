@@ -44,8 +44,7 @@ if (Object.keys(updates).length > 1) {
 }
 
 if (values.password) {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const { hashPassword } = await import('@better-auth/utils/password' as any);
+	const { hashPassword } = await import('better-auth/crypto');
 	const hashed = await hashPassword(values.password);
 	await db
 		.update(account)
