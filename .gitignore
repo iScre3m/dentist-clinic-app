@@ -9,6 +9,7 @@ build
 *.db-shm
 test-results
 playwright-report
+tests/e2e/.auth
 .DS_Store
 *.log
 coverage

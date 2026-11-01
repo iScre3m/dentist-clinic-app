@@ -125,6 +125,24 @@ duplicated. It refuses to run when `NODE_ENV=production`.
 | `pnpm staff:update`           | Change a staff name, email, or password                |
 | `pnpm test:e2e`               | Playwright end-to-end tests                            |
 
+### End-to-end tests
+
+`pnpm test:e2e` runs against its own database (`test.db`), never `local.db`.
+Before the tests start, `tests/e2e/global-setup.ts` migrates that file, empties
+every table, and runs `pnpm db:seed`, so the seeded staff account always exists.
+
+The `setup` project (`tests/e2e/auth.setup.ts`) then signs in once through the
+Better Auth API and saves the session cookies to `tests/e2e/.auth/staff.json`.
+Specs that need a logged-in user import `test` from `tests/e2e/fixtures.ts`,
+which loads that storage state; public pages keep importing
+`@playwright/test` so they run without a session.
+
+Each test runs in its own browser context, so sessions never cross tests or
+workers. Public specs clear cookies before every test and assert none are
+present; staff specs assert the session cookie is loaded, so a broken setup
+fails immediately instead of silently redirecting to `/login`. Because the saved
+session is shared by all staff tests, a staff spec must never sign out.
+
 ## Google Calendar (service account)
 
 For full setup details, see [Google Calendar setup](#google-calendar-setup) above.
