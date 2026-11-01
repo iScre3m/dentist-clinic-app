@@ -6,9 +6,10 @@ import { account, session, user, verification } from './db/schema';
 
 const secret = process.env.BETTER_AUTH_SECRET;
 
-if (!secret && process.env.NODE_ENV === 'production') {
-	throw new Error('Falta BETTER_AUTH_SECRET.');
-}
+// The missing-secret check for production lives in `hooks.server.ts`, not here.
+// This module is also imported by the CLI scripts (seed, prune, staff:update) and
+// by `vite build`, where SvelteKit's `building` flag and virtual modules are
+// unavailable, so a module-level throw would break them.
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {

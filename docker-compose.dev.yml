@@ -1,0 +1,35 @@
+name: dentist-dev
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: dentist-admin-dev
+    image: dentist-admin:dev
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      # Live source. These shadow the copy baked into the image so edits on the
+      # host reach the dev server. node_modules and .svelte-kit stay in the
+      # container on purpose.
+      - ./src:/app/src
+      - ./static:/app/static
+      - ./templates:/app/templates
+      - ./scripts:/app/scripts
+      - ./drizzle:/app/drizzle
+    restart: unless-stopped
+    environment:
+      - DATABASE_PATH=/app/data/local.db
+      - NODE_ENV=development
+      - PORT=5173
+      - HOST=0.0.0.0
+      - BETTER_AUTH_URL=http://localhost:5173
+      - APP_URL=http://localhost:5173
+      # Docker Desktop bind mounts do not deliver filesystem events into the
+      # container, so the watcher has to poll to make HMR work.
+      - VITE_USE_POLLING=1
+    command: sh -c "pnpm db:migrate && pnpm dev --host 0.0.0.0 --port 5173"

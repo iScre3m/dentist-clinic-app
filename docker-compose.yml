@@ -1,0 +1,22 @@
+name: dentist-prod
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dentist-admin
+    image: dentist-admin:prod
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      - DATABASE_PATH=/app/data/local.db
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+    command: sh -c "pnpm db:migrate && node build/index.js"

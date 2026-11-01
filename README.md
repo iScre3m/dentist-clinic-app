@@ -33,9 +33,12 @@ clinical data, or handle billing.
 
 ## Requirements
 
-- Node.js (LTS) and pnpm
+- Node.js (LTS) and pnpm, or Docker
 - A Google Cloud project with the Calendar API enabled
 - A durable disk path for the SQLite file in production
+
+## Docker (cross-platform)
+For running without installing Node.js locally, see [DOCKER.md](DOCKER.md).
 
 ## Environment variables
 
