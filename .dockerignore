@@ -4,8 +4,11 @@ node_modules
 .env
 .env.*
 !.env.example
-local.db
-local.db-*
+# Never bake database files (local, test, or WAL/SHM sidecars) into an image.
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
 data
 .DS_Store
 .svelte-kit
@@ -18,10 +21,10 @@ test-results
 *.log
 .vscode
 .idea
-.DS_Store
 Thumbs.db
 README.md
 AGENTS.md
+.agents
 .kilo
 .kilocode
 .opencode

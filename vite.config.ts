@@ -21,7 +21,15 @@ export default defineConfig({
 				? {
 						usePolling: true,
 						interval: 300,
-						ignored: ['**/node_modules/**', '**/.svelte-kit/**', '**/build/**']
+						ignored: [
+							'**/node_modules/**',
+							'**/.svelte-kit/**',
+							'**/build/**',
+							// SQLite writes on registration must not trigger a reload.
+							'**/data/**',
+							'**/*.db',
+							'**/*.db-*'
+						]
 					}
 				: undefined
 	}

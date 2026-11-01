@@ -73,9 +73,57 @@ clinical data, or handle billing.
 
 Set `FAKE_CALENDAR=1` in development to use fixtures instead of real Google Calendar.
 
-## Docker (cross-platform)
+## Docker quick start
 
-For running without installing Node.js locally, see [DOCKER.md](DOCKER.md).
+No Node.js or pnpm installation needed. You need Docker Engine with Compose v2.
+
+1. Create your environment file and set a secret:
+
+   ```sh
+   cp .env.example .env
+   # Set BETTER_AUTH_SECRET (openssl rand -base64 32).
+   # Keep FAKE_CALENDAR=1 to try the app without Google Calendar.
+   ```
+
+2. Start the development container (hot reload on source changes):
+
+   ```sh
+   docker compose -f docker-compose.dev.yml up --build
+   ```
+
+3. In a second terminal, create the staff account and synthetic data:
+
+   ```sh
+   docker compose -f docker-compose.dev.yml exec app pnpm db:seed
+   ```
+
+Open http://localhost:5173 and sign in with `SEED_STAFF_EMAIL` and
+`SEED_STAFF_PASSWORD` from `.env` (defaults: `staff@example.com` /
+`change-me-too`). Stop with:
+
+```sh
+docker compose -f docker-compose.dev.yml down
+```
+
+### Production build
+
+```sh
+docker compose up -d --build
+
+# First staff account. Seeding refuses NODE_ENV=production, so run it as development.
+docker compose run --rm -e NODE_ENV=development app node_modules/.bin/tsx scripts/seed.ts
+
+docker compose logs -f
+docker compose down
+```
+
+The app is served at http://localhost:3000. Before exposing it, set
+`BETTER_AUTH_URL` and `APP_URL` to the public HTTPS URL, set `FAKE_CALENDAR=0`,
+and use a strong `BETTER_AUTH_SECRET`.
+
+The SQLite database lives in `./data/local.db` on the host and survives
+rebuilds and container restarts. Backups, maintenance commands, and rebuild
+rules are in [DOCKER.md](DOCKER.md).
 
 ## Environment variables
 
@@ -197,9 +245,10 @@ Short operational notes for whoever runs the app:
 - The only public page is the patient registration form (`/`).
   Everything else requires a staff login.
 - Registration normalizes the number to E.164 with `libphonenumber-js`,
-  stores only E.164, and rejects numbers that are not valid mobiles for the
-  chosen country. Argentina's `9` is retried automatically when the patient
-  types the number the way they dial it.
+  stores only E.164, and rejects numbers that are not valid Argentine
+  mobiles. Patients type the number the way they dial it (for example
+  `11 15 5555 0001`); the mobile `9` is not added automatically, so the typed
+  number must already be a valid mobile.
 - Registration is idempotent by phone number and never reveals whether a
   number is already registered.
 - The registration endpoint is rate-limited to 5 attempts per hour per IP.

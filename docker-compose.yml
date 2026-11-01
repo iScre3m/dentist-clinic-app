@@ -14,9 +14,12 @@ services:
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    # Run drizzle-kit directly instead of through pnpm so the container never
+    # re-resolves or re-downloads dependencies at startup.
+    command: sh -c "node_modules/.bin/drizzle-kit migrate && exec node build/index.js"
     environment:
       - DATABASE_PATH=/app/data/local.db
       - NODE_ENV=production
       - PORT=3000
       - HOST=0.0.0.0
-    command: sh -c "pnpm db:migrate && node build/index.js"
+    init: true

@@ -12,7 +12,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
+      - ./data:/data
       # Live source. These shadow the copy baked into the image so edits on the
       # host reach the dev server. node_modules and .svelte-kit stay in the
       # container on purpose.
@@ -23,7 +23,7 @@ services:
       - ./drizzle:/app/drizzle
     restart: unless-stopped
     environment:
-      - DATABASE_PATH=/app/data/local.db
+      - DATABASE_PATH=/data/local.db
       - NODE_ENV=development
       - PORT=5173
       - HOST=0.0.0.0
@@ -32,4 +32,5 @@ services:
       # Docker Desktop bind mounts do not deliver filesystem events into the
       # container, so the watcher has to poll to make HMR work.
       - VITE_USE_POLLING=1
-    command: sh -c "pnpm db:migrate && pnpm dev --host 0.0.0.0 --port 5173"
+    command: sh -c "node_modules/.bin/drizzle-kit migrate && exec pnpm dev --host 0.0.0.0 --port 5173"
+    init: true
