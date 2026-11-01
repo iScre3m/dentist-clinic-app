@@ -66,7 +66,7 @@ if (existingPatients.length > 0) {
 		{
 			id: mateo,
 			name: 'Mateo Ramírez',
-			phone: '+525512345678',
+			phone: '+5491155550002',
 			whatsappConsent: 'granted',
 			consentSource: 'registration',
 			consentTextVersion: 1,
