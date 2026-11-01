@@ -4,6 +4,7 @@
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import { Input } from '#lib/components/ui/input/index.ts';
 	import { Label } from '#lib/components/ui/label/index.ts';
+	import { resolve } from '$app/paths';
 	import { formatDateTime } from '#lib/format.ts';
 	import { reminderCopy } from '#lib/copy.ts';
 	import { enhance } from '$app/forms';
@@ -29,6 +30,7 @@
 			startsAt: string | number | Date;
 			allDay?: boolean;
 		}>;
+		followUpsSummary?: { open: number; overdue: number };
 	};
 
 	let { data }: { data: PageData } = $props();
@@ -122,15 +124,30 @@
 									<Badge variant='outline' class={attendanceClasses[appointment.attendanceStatus]}>
 										{attendanceLabels[appointment.attendanceStatus]}
 									</Badge>
-								{/if}
-								{#if reminderAction(appointment) === 'send'}
-									<Button size='sm' variant='outline' onclick={() => {
-										window.location.href = '/turnos/' + appointment.id + '/recordatorio';
-									}}>
-										{reminderCopy.button.send}
-									</Button>
-								{:else}
-									<span class='text-xs text-muted-foreground'>{reminderCopy.message.notEligible}</span>
+									<form method='POST' action='?/setAttendance' use:enhance class='flex gap-1'>
+										<input type='hidden' name='appointmentId' value={appointment.id} />
+										<input type='hidden' name='status' value='confirmed' />
+										<Button type='submit' size='sm' variant='outline'>Confirmar</Button>
+									</form>
+									<form method='POST' action='?/setAttendance' use:enhance class='flex gap-1'>
+										<input type='hidden' name='appointmentId' value={appointment.id} />
+										<input type='hidden' name='status' value='attended' />
+										<Button type='submit' size='sm' variant='outline'>Asistió</Button>
+									</form>
+									<form method='POST' action='?/setAttendance' use:enhance class='flex gap-1'>
+										<input type='hidden' name='appointmentId' value={appointment.id} />
+										<input type='hidden' name='status' value='no_show' />
+										<Button type='submit' size='sm' variant='outline'>No vino</Button>
+									</form>
+									{#if reminderAction(appointment) === 'send'}
+										<Button size='sm' variant='outline' onclick={() => {
+											window.location.href = '/turnos/' + appointment.id + '/recordatorio';
+										}}>
+											{reminderCopy.button.send}
+										</Button>
+									{:else}
+										<span class='text-xs text-muted-foreground'>{reminderCopy.message.notEligible}</span>
+									{/if}
 								{/if}
 							</div>
 						</li>
@@ -173,6 +190,25 @@
 						</li>
 					{/each}
 				</ul>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Seguimientos</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			{#if (data as DashboardData).followUpsSummary && (data as DashboardData).followUpsSummary!.overdue > 0}
+				<p class='text-sm text-muted-foreground'>
+					{(data as DashboardData).followUpsSummary!.overdue} vencido
+					{(data as DashboardData).followUpsSummary!.overdue === 1 ? '' : 's'} ·
+					{(data as DashboardData).followUpsSummary!.open} pendiente
+					{(data as DashboardData).followUpsSummary!.open === 1 ? '' : 's'}
+				</p>
+				<a href={resolve('/(app)/follow-ups')} class='text-sm text-primary hover:underline'>Ver seguimientos →</a>
+			{:else}
+				<p class='text-muted-foreground text-sm'>Sin seguimientos pendientes.</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>

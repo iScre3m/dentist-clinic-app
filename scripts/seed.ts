@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+﻿import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 
 try {
@@ -17,12 +17,9 @@ const { auth } = await import('../src/lib/server/auth');
 const { appointments, followUps, patients, reminderRecords, user } =
 	await import('../src/lib/server/db/schema');
 
-const dentistName = process.env.SEED_DENTIST_NAME ?? 'Dra. Laura';
-const dentistEmail = process.env.SEED_DENTIST_EMAIL ?? 'dentist@example.com';
-const dentistPassword = process.env.SEED_DENTIST_PASSWORD ?? 'change-me-too';
-const assistantName = process.env.SEED_ASSISTANT_NAME ?? 'Asistente';
-const assistantEmail = process.env.SEED_ASSISTANT_EMAIL ?? 'assistant@example.com';
-const assistantPassword = process.env.SEED_ASSISTANT_PASSWORD ?? 'change-me-too';
+const staffName = process.env.SEED_STAFF_NAME ?? 'Dra. Laura';
+const staffEmail = process.env.SEED_STAFF_EMAIL ?? 'staff@example.com';
+const staffPassword = process.env.SEED_STAFF_PASSWORD ?? 'change-me-too';
 
 async function ensureUser(name: string, email: string, password: string) {
 	const existing = await db.select().from(user).where(eq(user.email, email)).limit(1);
@@ -31,7 +28,7 @@ async function ensureUser(name: string, email: string, password: string) {
 	await auth.api.signUpEmail({ body: { name, email, password } });
 
 	const created = await db.select().from(user).where(eq(user.email, email)).limit(1);
-	if (created.length === 0) throw new Error(`No se pudo crear el usuario ${email}`);
+	if (created.length === 0) throw new Error('No se pudo crear el usuario ' + email);
 	return created[0];
 }
 
@@ -43,13 +40,12 @@ function atART(daysFromNow: number, hour: number, minute = 0) {
 	return date;
 }
 
-const dentist = await ensureUser(dentistName, dentistEmail, dentistPassword);
-const assistant = await ensureUser(assistantName, assistantEmail, assistantPassword);
+const staff = await ensureUser(staffName, staffEmail, staffPassword);
 
 const existingPatients = await db.select({ id: patients.id }).from(patients).limit(1);
 
 if (existingPatients.length > 0) {
-	console.log('Datos sintéticos ya presentes; no se duplican.');
+	console.log('Los datos sintéticos ya están presentes; no se duplican.');
 } else {
 	const lucia = randomUUID();
 	const mateo = randomUUID();
@@ -136,7 +132,7 @@ if (existingPatients.length > 0) {
 		purpose: 'reminder',
 		templateKey: 'initial',
 		status: 'sent',
-		recordedBy: assistant.id,
+		recordedBy: staff.id,
 		recordedAt: atART(-1, 12)
 	});
 
@@ -146,9 +142,9 @@ if (existingPatients.length > 0) {
 		description: 'Coordinar la segunda sesión del tratamiento',
 		dueAt: atART(3, 9),
 		status: 'open',
-		assignedTo: assistant.id,
+		assignedTo: staff.id,
 		lastContactAt: atART(-1, 10)
 	});
 }
 
-console.log(`Listo. Personal: ${dentist.email}, ${assistant.email}`);
+console.log(`Listo. Personal: ${staff.email}`);

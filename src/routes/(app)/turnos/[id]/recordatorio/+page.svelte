@@ -31,18 +31,28 @@
 
 	let { data, form }: { data: RecordatorioData; form: PageProps['form'] } = $props();
 
-	const { appointment, message, waMeLink, templateKey, reminderRecord, canResend } = data;
+	const { appointment, message, templateKey, reminderRecord, canResend } = data;
 
+	let editedMessage = $state(message);
 	let copied = $state(false);
 
 	async function copyMessage() {
 		try {
-			await navigator.clipboard.writeText(message);
+			await navigator.clipboard.writeText(editedMessage);
 			copied = true;
 			setTimeout(() => (copied = false), 1500);
 		} catch {
 			// Fallback: keep the field selectable below.
 		}
+	}
+
+	function buildWaMeLink() {
+		const digits = (appointment.patientPhone ?? '').replace(/\D/g, '');
+		return `https://wa.me/${digits}?text=${encodeURIComponent(editedMessage)}`;
+	}
+
+	function openWhatsApp() {
+		window.open(buildWaMeLink(), '_blank');
 	}
 
 	function goBack() {
@@ -85,7 +95,7 @@
 			<textarea
 				id='message'
 				rows='6'
-				readonly
+				bind:value={editedMessage}
 				class='w-full font-mono text-sm leading-relaxed p-3 bg-muted border border-input rounded-md'
 				spellCheck='false'
 			>
@@ -111,11 +121,11 @@
 				Hacé clic en el enlace para abrir WhatsApp con el mensaje ya escrito. El envío lo hace el
 				asistente desde su propia app de WhatsApp.
 			</p>
-			<Button type='button' size='sm' variant='default' class='w-full' onclick={() => window.open(waMeLink, '_blank')}>
+			<Button type='button' size='sm' variant='default' class='w-full' onclick={openWhatsApp}>
 				Abrir en WhatsApp
 			</Button>
 			<p class='text-xs text-muted-foreground mt-2'>
-				Se abre en una nueva ventana ({waMeLink}). El enlace usa solo dígitos y el mensaje codificado.
+				Se abre en una nueva ventana. El enlace usa solo dígitos y el mensaje codificado.
 			</p>
 		</Card.Content>
 	</Card.Root>

@@ -26,7 +26,7 @@ clinical data, or handle billing.
 - SvelteKit + Svelte 5 + TypeScript
 - Tailwind CSS + shadcn-svelte
 - SQLite + Drizzle ORM / Drizzle Kit
-- Better Auth (two staff accounts, no signup)
+- Better Auth (one staff account, no signup)
 - Valibot for server-side validation
 - Playwright for end-to-end tests
 - pnpm
@@ -61,10 +61,9 @@ pnpm db:seed
 pnpm dev
 ```
 
-Seeded staff accounts come from `SEED_DENTIST_EMAIL` and
-`SEED_ASSISTANT_EMAIL` (default `dentist@example.com` and
-`assistant@example.com`, password `change-me-too`). Change both the accounts
-and the password before any real use.
+Seeded staff account comes from `SEED_STAFF_EMAIL` and
+`SEED_STAFF_PASSWORD` (default `staff@example.com`, password
+`change-me-too`). Change the account and the password before any real use.
 
 `db:seed` is safe to run twice: existing users and synthetic records are not
 duplicated. It refuses to run when `NODE_ENV=production`.

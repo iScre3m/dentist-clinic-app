@@ -5,6 +5,8 @@ import { and, asc, eq, gte, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { GoogleCalendarService } from '#lib/server/services/google-calendar/service.ts';
 import { normalizeMobile } from '#lib/server/services/patients/phone.ts';
+import { summary } from '#lib/server/services/follow-ups/index.ts';
+
 
 const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || 'primary';
 
@@ -45,7 +47,8 @@ export const load: PageServerLoad = async (event: any) => {
 		.limit(20);
 
 	const syncState = await db.select().from(calendarSyncState).where(eq(calendarSyncState.googleCalendarId, CALENDAR_ID)).limit(1);
-	return { upcoming, unmatched, syncState: syncState[0] ?? null, user: event.locals.session?.user ?? null };
+	const followUpsSummary = await summary();
+	return { upcoming, unmatched, syncState: syncState[0] ?? null, followUpsSummary, user: event.locals.session?.user ?? null };
 };
 
 export const actions: Actions = {
@@ -77,6 +80,15 @@ export const actions: Actions = {
 		const patientRows = await db.select().from(patients).where(eq(patients.phone, result.e164)).limit(1);
 		if (patientRows.length === 0) return { success: false, error: 'No se encontró un paciente con ese número' };
 		await db.update(appointments).set({ patientId: patientRows[0].id }).where(eq(appointments.id, appointmentId));
+		return { success: true };
+	},
+	setAttendance: async (event: any) => {
+		const formData = await event.request.formData();
+		const appointmentId = formData.get('appointmentId')?.toString();
+		const status = formData.get('status')?.toString();
+		if (!appointmentId || !status) return { success: false, error: 'Faltan datos' };
+		if (!['scheduled', 'confirmed', 'attended', 'no_show'].includes(status)) return { success: false, error: 'Estado inválido' };
+		await db.update(appointments).set({ attendanceStatus: status as any, outcomeRecordedAt: new Date() }).where(eq(appointments.id, appointmentId));
 		return { success: true };
 	}
 };

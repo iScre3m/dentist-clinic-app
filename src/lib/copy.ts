@@ -52,10 +52,45 @@ export const consentSourceLabels: Record<string, string> = {
 	staff: 'Registro del personal'
 };
 
-export const followUpStatusLabels: Record<string, string> = {
-	open: 'Pendiente',
-	done: 'Completado',
-	cancelled: 'Cancelado'
+export const followUpsCopy = {
+	page: {
+		title: 'Seguimientos',
+		subtitle: 'Tareas administrativas de tratamiento pendientes.'
+	},
+	summary: {
+		pending: (n: number) => `${n} seguimiento${n === 1 ? '' : 's'} pendiente${n === 1 ? '' : 's'}.`,
+		overdue: (n: number) => `${n} vencido${n === 1 ? '' : 's'}`
+	},
+	list: {
+		emptyTitle: 'No hay seguimientos pendientes.',
+		emptyHint: 'Creá un seguimiento desde el detalle de un paciente.',
+		dueLabel: 'Vence',
+		lastContactLabel: 'Último contacto',
+		contactDateLabel: 'Fecha de contacto',
+		contactDatePlaceholder: 'aaaa-mm-dd',
+		complete: 'Completar',
+		cancel: 'Cancel',
+		recordContact: 'Registrar contacto'
+	},
+	create: {
+		title: 'Nuevo seguimiento',
+		descriptionLabel: 'Descripción',
+		descriptionPlaceholder: 'Ej: Coordinar la segunda sesión del tratamiento.',
+		dueDateLabel: 'Fecha de vencimiento',
+		patientLabel: 'Paciente',
+		patientPlaceholder: 'Elegí un paciente',
+		submit: 'CreAR seguimiento'
+	},
+	messages: {
+		created: 'Seguimiento creado.',
+		contactRecorded: 'Contacto registrado.',
+		completed: 'Seguimiento completado.',
+		cancelled: 'Seguimiento cancelado.',
+		invalidForm: 'Revisá los datos cargados.',
+		notFound: 'No encontramos ese seguimiento.',
+		cannotComplete: 'No se puede completar ese seguimiento.',
+		cancelledState: 'No se puede registrar contacto en un seguimiento cancelado.'
+	}
 };
 
 /** Why a WhatsApp number was rejected, shared by every phone form. */
@@ -183,7 +218,7 @@ export const reminderCopy = {
 		skipped: 'Recordatorio omitido.',
 		resendRequired: 'Escribí un motivo para reenviar el recordatorio.',
 		alreadySent: 'Ya se envió un recordatorio para este turno.',
-		notEligible: '',
+		notEligible: 'No se puede enviar recordatorio: falta consentimiento o número válido.',
 		noPhone: 'El paciente no tiene un número de WhatsApp válido.',
 		consentMissing: 'El paciente no dio consentimiento para recibir recordatorios por WhatsApp.',
 		consentDenied: 'El paciente pidió no recibir mensajes de WhatsApp.'

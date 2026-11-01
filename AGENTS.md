@@ -100,10 +100,9 @@ deliberately revised.
 ### 1. Authentication and users
 
 -   Provide authenticated access to the application.
--   Support the two staff members: the dentist and the assistant.
--   Both accounts use the same user entity, the same dashboard, and
-    identical permissions. Do not model a role distinction between
-    dentist and assistant. The only distinction the data model makes is
+-   Support one staff account.
+-   The staff account uses the same user entity, the same dashboard, and
+    permissions. The only distinction the data model makes is
     between a staff user and a patient.
 -   Patients never log in: there are no patient accounts, passwords, or
     sessions. They have exactly one public page — the registration form —
@@ -294,8 +293,7 @@ The MVP should:
     clipboard is unavailable, show the text in a selectable field.
 -   Build the URL with digits only: no `+`, spaces, or separators.
 -   Offer the reminder only when the patient has `consent = granted`, a
-    usable mobile number, and no opt-out. For `unknown`, offer **Enviar
-    invitación a registrarse** instead. For `denied` or an opt-out, offer
+    usable mobile number, and no opt-out. For `denied` or an opt-out, offer
     no WhatsApp action at all.
 -   Show an inline error and no link when the number is invalid, is not a
     mobile number, or the patient opted out.
@@ -477,7 +475,7 @@ Document every variable in `.env.example` with placeholders only:
 
 ### Seeding and bootstrap
 
--   `pnpm db:seed` creates the two staff accounts and synthetic patients,
+-   `pnpm db:seed` creates one staff account and synthetic patients,
     appointments, and follow-ups.
 -   `pnpm db:prune` deletes reminder records and past appointments older
     than 90 days, keeping unresolved past appointments.
@@ -495,9 +493,9 @@ derive state from stored facts instead of duplicating it.
 ### users
 
 -   `id`, `name`, `email` (unique), `created_at`.
--   One staff user type only: the dentist and the assistant are equal
-    users, with no role column.
--   Two seeded accounts in the MVP; no invitation or signup flow.
+-   One staff user type only: the staff account is a single user with no
+    role column.
+-   One seeded account in the MVP; no invitation or signup flow.
 
 ### patients
 
@@ -506,7 +504,7 @@ derive state from stored facts instead of duplicating it.
 -   The phone number is the patient's identity; the internal `id` is only
     the row key used by foreign keys.
 -   `name` is a label for messages: not unique, not used for matching.
--   `whatsapp_consent` (`unknown` | `granted` | `denied`),
+-   `whatsapp_consent` (`granted` | `denied`),
     `consent_source` (`registration` | `staff`), `consent_text_version`,
     `consent_recorded_at`, `registered_at`, `opted_out_at`.
 -   `archived_at` instead of hard deletion. Archiving hides the patient

@@ -20,7 +20,7 @@ if (!values.email) {
 	process.exit(1);
 }
 if (!values.name && !values['new-email'] && !values.password) {
-	console.error('Indicá al menos --name, --new-email o --password.');
+	console.error('Indique al menos --name, --new-email o --password.');
 	process.exit(1);
 }
 
@@ -44,6 +44,7 @@ if (Object.keys(updates).length > 1) {
 }
 
 if (values.password) {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const { hashPassword } = await import('@better-auth/utils/password' as any);
 	const hashed = await hashPassword(values.password);
 	await db
