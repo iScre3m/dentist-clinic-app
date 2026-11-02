@@ -128,10 +128,21 @@ export const actions: Actions = {
 		if (!appointmentId || !status) return { success: false, error: 'Faltan datos' };
 		if (!['scheduled', 'confirmed', 'attended', 'no_show'].includes(status))
 			return { success: false, error: 'Estado inválido' };
+		const appointmentRows = await db
+			.select({ patientId: appointments.patientId })
+			.from(appointments)
+			.where(eq(appointments.id, appointmentId))
+			.limit(1);
 		await db
 			.update(appointments)
 			.set({ attendanceStatus: status as any, outcomeRecordedAt: new Date() })
 			.where(eq(appointments.id, appointmentId));
+		if (status === 'confirmed' && appointmentRows[0]?.patientId) {
+			await db
+				.update(patients)
+				.set({ whatsappConsent: 'granted', consentSource: 'staff', consentRecordedAt: new Date() })
+				.where(eq(patients.id, appointmentRows[0].patientId));
+		}
 		return { success: true };
 	}
 };

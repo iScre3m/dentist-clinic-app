@@ -8,6 +8,7 @@
 	import { formatDateTime } from '#lib/format.ts';
 	import { reminderCopy } from '#lib/copy.ts';
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 
 	type DashboardData = {
@@ -52,11 +53,11 @@
 	type ReminderAction = 'send' | 'none';
 	type Appointment = NonNullable<DashboardData['upcoming']>[number];
 
-	function reminderAction(a: Appointment): ReminderAction {
-		if (!a.patientConsent || !a.patientPhone || a.patientOptedOutAt) return 'none';
-		if (a.patientConsent === 'granted') return 'send';
-		return 'none';
-	}
+function reminderAction(a: Appointment): ReminderAction {
+	if (!a.patientConsent || !a.patientPhone || a.patientOptedOutAt) return 'none';
+	if (a.patientConsent === 'granted') return 'send';
+	return 'none';
+}
 </script>
 
 <svelte:head>
@@ -134,17 +135,47 @@
 									<Badge variant="outline" class={attendanceClasses[appointment.attendanceStatus]}>
 										{attendanceLabels[appointment.attendanceStatus]}
 									</Badge>
-									<form method="POST" action="?/setAttendance" use:enhance class="flex gap-1">
+									<form
+										method="POST"
+										action="?/setAttendance"
+										use:enhance={() => {
+											return async ({ update }) => {
+												await update();
+												await invalidateAll();
+											};
+										}}
+										class="flex gap-1"
+									>
 										<input type="hidden" name="appointmentId" value={appointment.id} />
 										<input type="hidden" name="status" value="confirmed" />
 										<Button type="submit" size="sm" variant="outline">Confirmar</Button>
 									</form>
-									<form method="POST" action="?/setAttendance" use:enhance class="flex gap-1">
+									<form
+										method="POST"
+										action="?/setAttendance"
+										use:enhance={() => {
+											return async ({ update }) => {
+												await update();
+												await invalidateAll();
+											};
+										}}
+										class="flex gap-1"
+									>
 										<input type="hidden" name="appointmentId" value={appointment.id} />
 										<input type="hidden" name="status" value="attended" />
 										<Button type="submit" size="sm" variant="outline">Asistió</Button>
 									</form>
-									<form method="POST" action="?/setAttendance" use:enhance class="flex gap-1">
+									<form
+										method="POST"
+										action="?/setAttendance"
+										use:enhance={() => {
+											return async ({ update }) => {
+												await update();
+												await invalidateAll();
+											};
+										}}
+										class="flex gap-1"
+									>
 										<input type="hidden" name="appointmentId" value={appointment.id} />
 										<input type="hidden" name="status" value="no_show" />
 										<Button type="submit" size="sm" variant="outline">No vino</Button>
@@ -164,6 +195,15 @@
 											>{reminderCopy.message.notEligible}</span
 										>
 									{/if}
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => {
+											window.location.href = '/turnos/' + appointment.id + '/factura';
+										}}
+									>
+										Factura
+									</Button>
 								{/if}
 							</div>
 						</li>

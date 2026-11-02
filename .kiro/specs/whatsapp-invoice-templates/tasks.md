@@ -79,6 +79,7 @@ Reference pattern for pages: `src/routes/(app)/turnos/[id]/recordatorio/`.
     - latest 20 with date / patient name / total / status filters; empty state
     - _Requirements: 5.4, 5.6_
   - [x] 7.4 Navigation and entry points
+  - [x] 7.5 Add Factura button in dashboard appointment rows (entry point to /turnos/[id]/factura)
     - header links for `Precios` and `Facturas`; `Factura` link on past appointments (dashboard/patient detail)
     - _Requirements: 3.1, 5.4_
 
@@ -95,7 +96,12 @@ Reference pattern for pages: `src/routes/(app)/turnos/[id]/recordatorio/`.
 - Do not store message bodies or `wa.me` URLs anywhere.
 - Check repo tooling before adding fast-check: if absent, cover correctness properties with deterministic many-case tests instead of new dependencies.
 
-## Task Dependency Graph
+## Post-implementation adjustments
+
+- Dashboard: clicking "Confirmar" grants WhatsApp consent (`granted`, source `staff`) so reminders become available.
+- `/facturas`: server load now queries `invoiceHistory`; page renders invoice list (patient, total, date) with empty state.
+- `/turnos/[id]/factura`: textarea uses writable `$derived`; quantity defaults to 1 and resets on service change; generate button only shown when not blocked.
+- Dashboard and factura forms invalidate data after attendance changes.
 
 ```json
 {

@@ -251,7 +251,8 @@ async function loadInvoiceContext(appointmentId: string): Promise<GetInvoiceData
 			summary: appointments.summary,
 			startsAt: appointments.startsAt,
 			allDay: appointments.allDay,
-			calendarStatus: appointments.calendarStatus
+			calendarStatus: appointments.calendarStatus,
+			attendanceStatus: appointments.attendanceStatus
 		})
 		.from(appointments)
 		.where(eq(appointments.id, appointmentId))
@@ -260,7 +261,7 @@ async function loadInvoiceContext(appointmentId: string): Promise<GetInvoiceData
 	if (!appointment) return { ok: false, reason: 'appointment-not-found' };
 	if (appointment.calendarStatus !== 'confirmed') return { ok: false, reason: 'cancelled' };
 	if (!appointment.startsAt) return { ok: false, reason: 'all-day' };
-	if (new Date(appointment.startsAt).getTime() >= Date.now())
+	if (new Date(appointment.startsAt).getTime() >= Date.now() && appointment.attendanceStatus !== 'attended')
 		return { ok: false, reason: 'future' };
 
 	const [patient] = await db
