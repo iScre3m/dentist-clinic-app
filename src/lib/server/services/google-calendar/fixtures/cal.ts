@@ -22,12 +22,12 @@ export const FIXTURES: Array<unknown> = [
 		summary: 'Turno — Lucía Fernández',
 		description: 'Paciente: +54 9 11 5555-0001',
 		start: {
-			dateTime: '2026-11-02T10:00:00-03:00',
+			dateTime: '2026-11-02T10:00:00-03:00'
 		},
 		end: {
-			dateTime: '2026-11-02T10:45:00-03:00',
+			dateTime: '2026-11-02T10:45:00-03:00'
 		},
-		recurringEventId: 'dev-recur-1',
+		recurringEventId: 'dev-recur-1'
 	},
 
 	/**
@@ -39,12 +39,12 @@ export const FIXTURES: Array<unknown> = [
 		summary: 'Turno — Mateo Ramírez',
 		description: '',
 		start: {
-			dateTime: '2026-11-03T14:30:00-03:00',
+			dateTime: '2026-11-03T14:30:00-03:00'
 		},
 		end: {
-			dateTime: '2026-11-03T15:15:00-03:00',
+			dateTime: '2026-11-03T15:15:00-03:00'
 		},
-		recurringEventId: 'dev-recur-2',
+		recurringEventId: 'dev-recur-2'
 	},
 
 	/**
@@ -56,13 +56,13 @@ export const FIXTURES: Array<unknown> = [
 		summary: 'Turno',
 		description: '',
 		start: {
-			date: '2026-11-05',
+			date: '2026-11-05'
 		},
 		end: {
-			date: '2026-11-05',
+			date: '2026-11-05'
 		},
 		allDay: true,
-		recurringEventId: 'dev-recur-3',
+		recurringEventId: 'dev-recur-3'
 	},
 
 	/**
@@ -73,13 +73,13 @@ export const FIXTURES: Array<unknown> = [
 		summary: 'Turno — Paciente eliminado',
 		description: 'Paciente: +54 9 11 5555-0002',
 		start: {
-			dateTime: '2026-11-07T09:00:00-03:00',
+			dateTime: '2026-11-07T09:00:00-03:00'
 		},
 		end: {
-			dateTime: '2026-11-07T09:45:00-03:00',
+			dateTime: '2026-11-07T09:45:00-03:00'
 		},
 		status: 'cancelled',
-		recurringEventId: 'dev-recur-4',
+		recurringEventId: 'dev-recur-4'
 	},
 
 	/**
@@ -90,12 +90,12 @@ export const FIXTURES: Array<unknown> = [
 		summary: 'Turno — Fijo',
 		description: 'Paciente: 011 5555-0001', // fijo, no celular
 		start: {
-			dateTime: '2026-11-08T11:00:00-03:00',
+			dateTime: '2026-11-08T11:00:00-03:00'
 		},
 		end: {
-			dateTime: '2026-11-08T11:45:00-03:00',
+			dateTime: '2026-11-08T11:45:00-03:00'
 		},
-		recurringEventId: 'dev-recur-5',
+		recurringEventId: 'dev-recur-5'
 	},
 
 	/**
@@ -106,10 +106,10 @@ export const FIXTURES: Array<unknown> = [
 		summary: 'Nuevo turno sin paciente',
 		description: '',
 		start: {
-			dateTime: '2026-11-10T15:00:00-03:00',
+			dateTime: '2026-11-10T15:00:00-03:00'
 		},
 		end: {
-			dateTime: '2026-11-10T15:45:00-03:00',
-		},
-	},
+			dateTime: '2026-11-10T15:45:00-03:00'
+		}
+	}
 ];

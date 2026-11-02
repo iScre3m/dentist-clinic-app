@@ -69,7 +69,7 @@ export const followUpsCopy = {
 		contactDateLabel: 'Fecha de contacto',
 		contactDatePlaceholder: 'aaaa-mm-dd',
 		complete: 'Completar',
-		cancel: 'Cancel',
+		cancel: 'Cancelar',
 		recordContact: 'Registrar contacto'
 	},
 	create: {
@@ -79,7 +79,7 @@ export const followUpsCopy = {
 		dueDateLabel: 'Fecha de vencimiento',
 		patientLabel: 'Paciente',
 		patientPlaceholder: 'Elegí un paciente',
-		submit: 'CreAR seguimiento'
+		submit: 'Crear seguimiento'
 	},
 	messages: {
 		created: 'Seguimiento creado.',
@@ -102,6 +102,46 @@ export function phoneFailureMessage(reason: string): string {
 			return 'El número no parece válido. Solo aceptamos celulares argentinos; revisá el código de área y el número.';
 	}
 }
+
+export const preciosCopy = {
+	page: {
+		title: 'Prácticas y precios',
+		subtitle: 'Catálogo de prácticas con el precio vigente para las facturas.'
+	},
+	list: {
+		emptyTitle: 'Cargá la primera práctica para poder facturar.',
+		emptyHint:
+			'Las prácticas con su precio se usan para armar las facturas de los turnos realizados.',
+		priceLabel: 'Precio vigente',
+		inactiveLabel: 'Inactiva',
+		lastUpdateLabel: 'Actualizado por',
+		activate: 'Activar',
+		deactivate: 'Desactivar'
+	},
+	create: {
+		openButton: 'Nueva práctica',
+		title: 'Nueva práctica',
+		typeLabel: 'Identificador (ej: limpieza)',
+		nameLabel: 'Nombre (ej: Limpieza / profilaxis)',
+		priceLabel: 'Precio en pesos',
+		submit: 'Crear'
+	},
+	edit: {
+		priceLabel: 'Nuevo precio',
+		save: 'Guardar',
+		cancel: 'Cancelar'
+	},
+	messages: {
+		created: 'Práctica cargada.',
+		updated: 'Precio actualizado.',
+		activated: 'Práctica activada.',
+		deactivated: 'Práctica desactivada.',
+		duplicate: 'Ya existe una práctica con ese identificador.',
+		invalid: 'Revisá los datos: el precio debe ser un número entero positivo.',
+		notFound: 'No encontramos esa práctica.',
+		failed: 'No se pudo actualizar la práctica.'
+	}
+};
 
 export const patientsCopy = {
 	page: {
@@ -140,11 +180,13 @@ export const patientsCopy = {
 		registeredLabel: 'Alta',
 		verifiedAtLabel: 'Número confirmado el',
 		confirmPhone: 'Confirmar número',
-		confirmPhoneHint: 'Confirmá el número cuando el paciente lo verifique en consulta o por WhatsApp.',
+		confirmPhoneHint:
+			'Confirmá el número cuando el paciente lo verifique en consulta o por WhatsApp.',
 		editTitle: 'Editar datos',
 		editNameLabel: 'Nombre y apellido',
 		editPhoneLabel: 'Número de WhatsApp',
-		editPhoneHint: 'Se guarda normalizado al formato internacional, por ejemplo +54 9 11 5555-0001.',
+		editPhoneHint:
+			'Se guarda normalizado al formato internacional, por ejemplo +54 9 11 5555-0001.',
 		editEmailLabel: 'Correo (opcional)',
 		editEmailHint: 'Dejalo vacío si el paciente no dio un correo.',
 		editSave: 'Guardar cambios',
@@ -180,7 +222,8 @@ export const patientsCopy = {
 	messages: {
 		notFound: 'No encontramos ese paciente.',
 		updated: 'Datos actualizados.',
-		updatedNewPhone: 'Datos actualizados. El número nuevo queda sin confirmar hasta la próxima consulta.',
+		updatedNewPhone:
+			'Datos actualizados. El número nuevo queda sin confirmar hasta la próxima consulta.',
 		phoneTaken: 'Otro paciente ya usa ese número. Corregí el número o buscá al paciente existente.',
 		verified: 'Número confirmado.',
 		alreadyVerified: 'El número ya estaba confirmado.',

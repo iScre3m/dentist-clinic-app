@@ -1,6 +1,7 @@
 # Docker Guide
 
 ## Prerequisites
+
 - Docker Engine with Compose v2 (`docker compose version`)
 - A `.env` file (copy `.env.example`)
 
@@ -12,15 +13,15 @@ cp .env.example .env
 
 Then fill in `.env`:
 
-| Variable | Notes |
-| --- | --- |
-| `BETTER_AUTH_SECRET` | Required in production. Generate with `openssl rand -base64 32`. |
-| `BETTER_AUTH_URL` | Public URL of the app. Dev: `http://localhost:5173`. Prod: your domain. |
-| `APP_URL` | Same value as `BETTER_AUTH_URL`. Used to build registration links. |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Base64-encoded service-account JSON. Leave empty when using `FAKE_CALENDAR`. |
-| `GOOGLE_CALENDAR_ID` | The practice calendar ID. |
-| `FAKE_CALENDAR` | `1` reads calendar fixtures instead of Google. Use it for local work. |
-| `SEED_STAFF_NAME`, `SEED_STAFF_EMAIL`, `SEED_STAFF_PASSWORD` | Only read by `scripts/seed.ts`. |
+| Variable                                                     | Notes                                                                        |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`                                         | Required in production. Generate with `openssl rand -base64 32`.             |
+| `BETTER_AUTH_URL`                                            | Public URL of the app. Dev: `http://localhost:5173`. Prod: your domain.      |
+| `APP_URL`                                                    | Same value as `BETTER_AUTH_URL`. Used to build registration links.           |
+| `GOOGLE_SERVICE_ACCOUNT_JSON`                                | Base64-encoded service-account JSON. Leave empty when using `FAKE_CALENDAR`. |
+| `GOOGLE_CALENDAR_ID`                                         | The practice calendar ID.                                                    |
+| `FAKE_CALENDAR`                                              | `1` reads calendar fixtures instead of Google. Use it for local work.        |
+| `SEED_STAFF_NAME`, `SEED_STAFF_EMAIL`, `SEED_STAFF_PASSWORD` | Only read by `scripts/seed.ts`.                                              |
 
 `DATABASE_PATH`, `NODE_ENV`, `PORT` and `HOST` are set by the compose files and
 override the values in `.env`. Both map the host `./data` directory, but the

@@ -8,7 +8,7 @@ services:
     container_name: dentist-admin
     image: dentist-admin:prod
     ports:
-      - "3000:3000"
+      - '3000:3000'
     env_file:
       - .env
     volumes:

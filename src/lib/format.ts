@@ -46,3 +46,14 @@ export function formatDate(value: Date | null): string {
 export function localDateKey(date: Date = new Date()): string {
 	return localDateFormatter.format(date);
 }
+
+/** ARS prices without decimals: "$ 15.000". */
+const arsFormatter = new Intl.NumberFormat('es-AR', {
+	style: 'currency',
+	currency: 'ARS',
+	maximumFractionDigits: 0
+});
+
+export function formatArs(value: number): string {
+	return arsFormatter.format(value);
+}

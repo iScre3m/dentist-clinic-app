@@ -13,12 +13,10 @@ export type CreateFollowUpInput = {
 };
 
 export type CreateFollowUpResult =
-	| { ok: true; id: string }
-	| { ok: false; reason: 'not-found' | 'invalid-input' };
+	{ ok: true; id: string } | { ok: false; reason: 'not-found' | 'invalid-input' };
 
 export type RecordContactResult =
-	| { ok: true }
-	| { ok: false; reason: 'not-found' | 'already-done' | 'already-cancelled' };
+	{ ok: true } | { ok: false; reason: 'not-found' | 'already-done' | 'already-cancelled' };
 
 export type CompleteResult = RecordContactResult;
 

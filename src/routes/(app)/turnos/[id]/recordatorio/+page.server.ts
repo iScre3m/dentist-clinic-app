@@ -96,9 +96,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const existing = await db
 		.select()
 		.from(reminderRecords)
-		.where(
-			and(eq(reminderRecords.appointmentId, id), eq(reminderRecords.purpose, 'reminder'))
-		)
+		.where(and(eq(reminderRecords.appointmentId, id), eq(reminderRecords.purpose, 'reminder')))
 		.orderBy(desc(reminderRecords.recordedAt))
 		.limit(1);
 
@@ -156,7 +154,10 @@ export const actions: Actions = {
 			.select()
 			.from(reminderRecords)
 			.where(
-				and(eq(reminderRecords.appointmentId, appointmentId), eq(reminderRecords.status, 'prepared'))
+				and(
+					eq(reminderRecords.appointmentId, appointmentId),
+					eq(reminderRecords.status, 'prepared')
+				)
 			)
 			.orderBy(desc(reminderRecords.createdAt))
 			.limit(1);
@@ -198,7 +199,10 @@ export const actions: Actions = {
 			.select()
 			.from(reminderRecords)
 			.where(
-				and(eq(reminderRecords.appointmentId, appointmentId), eq(reminderRecords.status, 'prepared'))
+				and(
+					eq(reminderRecords.appointmentId, appointmentId),
+					eq(reminderRecords.status, 'prepared')
+				)
 			)
 			.orderBy(desc(reminderRecords.createdAt))
 			.limit(1);

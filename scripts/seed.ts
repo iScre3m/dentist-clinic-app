@@ -14,8 +14,16 @@ if (process.env.NODE_ENV === 'production') {
 
 const { db } = await import('../src/lib/server/db');
 const { auth } = await import('../src/lib/server/auth');
-const { appointments, followUps, patients, reminderRecords, user } =
-	await import('../src/lib/server/db/schema');
+const {
+	appointmentServices,
+	appointments,
+	followUps,
+	invoiceHistory,
+	patients,
+	reminderRecords,
+	servicePrices,
+	user
+} = await import('../src/lib/server/db/schema');
 
 const staffName = process.env.SEED_STAFF_NAME ?? 'Dra. Laura';
 const staffEmail = process.env.SEED_STAFF_EMAIL ?? 'staff@example.com';
@@ -41,6 +49,42 @@ function atART(daysFromNow: number, hour: number, minute = 0) {
 }
 
 const staff = await ensureUser(staffName, staffEmail, staffPassword);
+
+// Service type catalog. Permanent reference data; seeded once, never re-priced here.
+const catalogRows = [
+	{ serviceType: 'consulta', name: 'Consulta', price: 15000 },
+	{ serviceType: 'limpieza', name: 'Limpieza / profilaxis', price: 20000 },
+	{ serviceType: 'empaste', name: 'Empaste simple', price: 25000 },
+	{ serviceType: 'extraccion', name: 'Extracción simple', price: 30000 },
+	{ serviceType: 'blanqueamiento', name: 'Blanqueamiento', price: 45000 }
+];
+
+const existingCatalog = await db
+	.select({ id: servicePrices.id, serviceType: servicePrices.serviceType })
+	.from(servicePrices);
+if (existingCatalog.length > 0) {
+	console.log('El catálogo de prácticas ya está presente; no se duplica.');
+} else {
+	await db.insert(servicePrices).values(
+		catalogRows.map((row) => ({
+			id: randomUUID(),
+			serviceType: row.serviceType,
+			name: row.name,
+			price: row.price,
+			updatedBy: staff.id
+		}))
+	);
+	console.log(`Catálogo de prácticas creado: ${catalogRows.length} tipos.`);
+}
+
+// Resolve catalog ids from the database so appointment services always point at real rows.
+const catalogIds = new Map(
+	(
+		await db
+			.select({ id: servicePrices.id, serviceType: servicePrices.serviceType })
+			.from(servicePrices)
+	).map((row) => [row.serviceType, row.id])
+);
 
 const existingPatients = await db.select({ id: patients.id }).from(patients).limit(1);
 
@@ -84,8 +128,36 @@ if (existingPatients.length > 0) {
 	]);
 
 	const firstAppointment = randomUUID();
+	const attendedAppointment = randomUUID(); // 10 days ago, attended, with services
+	const pastOngoingTreatment = randomUUID(); // 21 days ago, attended, no services yet
 
 	await db.insert(appointments).values([
+		// Past + attended + with recorded services: invoice-ready example.
+		{
+			id: attendedAppointment,
+			patientId: lucia,
+			googleCalendarId: 'fake-calendar',
+			googleEventId: 'dev-event-5',
+			summary: 'Turno — Lucía Fernández',
+			startsAt: atART(-10, 10),
+			endsAt: atART(-10, 10, 45),
+			attendanceStatus: 'attended',
+			outcomeRecordedBy: staff.id,
+			outcomeRecordedAt: atART(-10, 11)
+		},
+		// Past + attended + without services: shows the "add services" empty state.
+		{
+			id: pastOngoingTreatment,
+			patientId: mateo,
+			googleCalendarId: 'fake-calendar',
+			googleEventId: 'dev-event-6',
+			summary: 'Turno — Mateo Ramírez',
+			startsAt: atART(-21, 15, 30),
+			endsAt: atART(-21, 16, 15),
+			attendanceStatus: 'attended',
+			outcomeRecordedBy: staff.id,
+			outcomeRecordedAt: atART(-21, 16)
+		},
 		{
 			id: firstAppointment,
 			patientId: lucia,
@@ -126,15 +198,71 @@ if (existingPatients.length > 0) {
 		}
 	]);
 
-	await db.insert(reminderRecords).values({
+	const consultaId = catalogIds.get('consulta')!;
+	const limpiezaId = catalogIds.get('limpieza')!;
+
+	await db.insert(appointmentServices).values([
+		{
+			id: randomUUID(),
+			appointmentId: attendedAppointment,
+			servicePriceId: consultaId,
+			quantity: 1,
+			addedBy: staff.id
+		},
+		{
+			id: randomUUID(),
+			appointmentId: attendedAppointment,
+			servicePriceId: limpiezaId,
+			quantity: 1,
+			addedBy: staff.id
+		}
+	]);
+
+	// Invoice snapshot for the attended appointment (prices at generation time).
+	await db.insert(invoiceHistory).values({
 		id: randomUUID(),
-		appointmentId: firstAppointment,
-		purpose: 'reminder',
-		templateKey: 'initial',
+		appointmentId: attendedAppointment,
+		patientId: lucia,
+		patientName: 'Lucía Fernández',
+		patientPhone: '+5491155550001',
+		appointmentStartsAt: atART(-10, 10),
+		services: [
+			{ serviceType: 'consulta', name: 'Consulta', price: 15000, quantity: 1, subtotal: 15000 },
+			{
+				serviceType: 'limpieza',
+				name: 'Limpieza / profilaxis',
+				price: 20000,
+				quantity: 1,
+				subtotal: 20000
+			}
+		],
+		subtotal: 35000,
+		total: 35000,
+		createdBy: staff.id,
 		status: 'sent',
-		recordedBy: staff.id,
-		recordedAt: atART(-1, 12)
+		sentAt: atART(-9, 12)
 	});
+
+	await db.insert(reminderRecords).values([
+		{
+			id: randomUUID(),
+			appointmentId: firstAppointment,
+			purpose: 'reminder',
+			templateKey: 'initial',
+			status: 'sent',
+			recordedBy: staff.id,
+			recordedAt: atART(-1, 12)
+		},
+		{
+			id: randomUUID(),
+			appointmentId: attendedAppointment,
+			purpose: 'invoice',
+			templateKey: 'invoice',
+			status: 'sent',
+			recordedBy: staff.id,
+			recordedAt: atART(-9, 12)
+		}
+	]);
 
 	await db.insert(followUps).values({
 		id: randomUUID(),

@@ -1,5 +1,12 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+	type AnySQLiteColumn,
+	index,
+	integer,
+	sqliteTable,
+	text,
+	uniqueIndex
+} from 'drizzle-orm/sqlite-core';
 
 const nowMs = sql`(unixepoch() * 1000)`;
 
@@ -132,7 +139,9 @@ export const reminderRecords = sqliteTable(
 		appointmentId: text('appointment_id')
 			.notNull()
 			.references(() => appointments.id, { onDelete: 'cascade' }),
-		purpose: text('purpose', { enum: ['reminder', 'confirmation', 'follow_up', 'resend'] })
+		purpose: text('purpose', {
+			enum: ['reminder', 'confirmation', 'follow_up', 'resend', 'invoice']
+		})
 			.notNull()
 			.default('reminder'),
 		templateKey: text('template_key').notNull(),
@@ -188,9 +197,96 @@ export const calendarSyncState = sqliteTable('calendar_sync_state', {
 	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
 });
 
+/** Fixed-price catalog. Permanent: never deleted, only deactivated. */
+export const servicePrices = sqliteTable(
+	'service_prices',
+	{
+		id: text('id').primaryKey(),
+		serviceType: text('service_type').notNull(),
+		name: text('name').notNull(),
+		price: integer('price').notNull(),
+		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+		updatedBy: text('updated_by')
+			.notNull()
+			.references(() => user.id),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
+	},
+	(t) => [
+		uniqueIndex('service_prices_service_type_unique').on(t.serviceType),
+		index('service_prices_is_active_idx').on(t.isActive)
+	]
+);
+
+/** Services performed on an appointment, recorded by staff. */
+export const appointmentServices = sqliteTable(
+	'appointment_services',
+	{
+		id: text('id').primaryKey(),
+		appointmentId: text('appointment_id')
+			.notNull()
+			.references(() => appointments.id, { onDelete: 'cascade' }),
+		servicePriceId: text('service_price_id')
+			.notNull()
+			.references(() => servicePrices.id, { onDelete: 'restrict' }),
+		quantity: integer('quantity').notNull().default(1),
+		addedBy: text('added_by')
+			.notNull()
+			.references(() => user.id),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
+	},
+	(t) => [
+		uniqueIndex('appointment_services_unique').on(t.appointmentId, t.servicePriceId),
+		index('appointment_services_appointment_idx').on(t.appointmentId)
+	]
+);
+
+/** Immutable invoice snapshot with prices at generation time. Pruned older than 90 days. */
+export const invoiceHistory = sqliteTable(
+	'invoice_history',
+	{
+		id: text('id').primaryKey(),
+		appointmentId: text('appointment_id')
+			.notNull()
+			.references(() => appointments.id, { onDelete: 'cascade' }),
+		patientId: text('patient_id')
+			.notNull()
+			.references(() => patients.id),
+		patientName: text('patient_name').notNull(),
+		patientPhone: text('patient_phone').notNull(),
+		appointmentStartsAt: integer('appointment_starts_at', { mode: 'timestamp_ms' }).notNull(),
+		services: text('services', { mode: 'json' }).notNull(),
+		subtotal: integer('subtotal').notNull(),
+		total: integer('total').notNull(),
+		createdBy: text('created_by')
+			.notNull()
+			.references(() => user.id),
+		status: text('status', { enum: ['generated', 'sent', 'resent'] })
+			.notNull()
+			.default('generated'),
+		sentAt: integer('sent_at', { mode: 'timestamp_ms' }),
+		resentReason: text('resent_reason'),
+		resentOf: text('resent_of').references((): AnySQLiteColumn => invoiceHistory.id),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
+	},
+	(t) => [
+		index('invoice_history_appointment_idx').on(t.appointmentId),
+		index('invoice_history_patient_idx').on(t.patientId),
+		index('invoice_history_status_idx').on(t.status),
+		index('invoice_history_created_at_idx').on(t.createdAt)
+	]
+);
+
 export type Patient = typeof patients.$inferSelect;
 export type NewPatient = typeof patients.$inferInsert;
 export type Appointment = typeof appointments.$inferSelect;
 export type NewAppointment = typeof appointments.$inferInsert;
 export type ReminderRecord = typeof reminderRecords.$inferSelect;
 export type FollowUp = typeof followUps.$inferSelect;
+export type ServicePrice = typeof servicePrices.$inferSelect;
+export type NewServicePrice = typeof servicePrices.$inferInsert;
+export type AppointmentService = typeof appointmentServices.$inferSelect;
+export type NewAppointmentService = typeof appointmentServices.$inferInsert;
+export type InvoiceHistory = typeof invoiceHistory.$inferSelect;
+export type NewInvoiceHistory = typeof invoiceHistory.$inferInsert;

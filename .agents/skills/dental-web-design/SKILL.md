@@ -99,14 +99,14 @@ Page shell:
 
 ```svelte
 <script lang="ts">
-  import { Button } from '#lib/components/ui/button/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
 </script>
 
-<div class='space-y-6'>
-  <header>
-    <h1 class='text-xl font-semibold'>Título</h1>
-    <p class='text-muted-foreground mt-1 text-sm'>Subtítulo.</p>
-  </header>
+<div class="space-y-6">
+	<header>
+		<h1 class="text-xl font-semibold">Título</h1>
+		<p class="text-muted-foreground mt-1 text-sm">Subtítulo.</p>
+	</header>
 </div>
 ```
 
@@ -114,29 +114,27 @@ Card panel:
 
 ```svelte
 <Card.Root>
-  <Card.Header>
-    <Card.Title>Título</Card.Title>
-  </Card.Header>
-  <Card.Content>
-    <p class='text-muted-foreground text-sm'>Contenido.</p>
-  </Card.Content>
+	<Card.Header>
+		<Card.Title>Título</Card.Title>
+	</Card.Header>
+	<Card.Content>
+		<p class="text-muted-foreground text-sm">Contenido.</p>
+	</Card.Content>
 </Card.Root>
 ```
 
 Status badge:
 
 ```svelte
-<Badge variant='outline' class='border-amber-200 bg-amber-50 text-amber-800'>
-  Sin confirmar
-</Badge>
+<Badge variant="outline" class="border-amber-200 bg-amber-50 text-amber-800">Sin confirmar</Badge>
 ```
 
 Form field:
 
 ```svelte
-<div class='space-y-2'>
-  <Label for='phone'>Teléfono</Label>
-  <Input id='phone' name='phone' placeholder='+54 9 11...' />
+<div class="space-y-2">
+	<Label for="phone">Teléfono</Label>
+	<Input id="phone" name="phone" placeholder="+54 9 11..." />
 </div>
 ```
 

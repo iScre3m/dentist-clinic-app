@@ -38,6 +38,7 @@
 ## Alcance (dentro / fuera)
 
 **Dentro:**
+
 - Botón "Enviar recordatorio" en el panel por turno próximo (filtrado por consentimiento/teléfono/opt-out).
 - Ruta de vista previa `/turnos/[id]/recordatorio` con plantilla, enlace `wa.me`, copia al portapapeles, acciones enviar/omitir.
 - Registros `reminder_records` (crear/reutilizar `prepared`, marcar `sent`/`skipped`, reenvío con motivo).
@@ -45,6 +46,7 @@
 - Error en línea para `denied` / opt-out / teléfono sin validar.
 
 **Fuera:**
+
 - Página de detalle de paciente (`pacientes/[id]`) y su botón de recordatorio.
 - Registro automático, recordatorios programados, estados de entrega/lectura.
 - Migración de BD (la tabla `reminder_records` ya existe).

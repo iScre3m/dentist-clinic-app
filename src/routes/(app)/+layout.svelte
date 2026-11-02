@@ -19,11 +19,13 @@
 		<div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
 			<div class="flex items-center gap-6">
 				<span class="text-sm font-semibold">Consultorio</span>
-<nav class="text-muted-foreground flex gap-4 text-sm">
-				<a href={resolve('/(app)/dashboard')} class="hover:text-foreground">Panel</a>
-				<a href={resolve('/(app)/pacientes')} class="hover:text-foreground">Pacientes</a>
-				<a href={resolve('/(app)/follow-ups')} class="hover:text-foreground">Seguimientos</a>
-			</nav>
+				<nav class="text-muted-foreground flex gap-4 text-sm">
+					<a href={resolve('/(app)/dashboard')} class="hover:text-foreground">Panel</a>
+					<a href={resolve('/(app)/pacientes')} class="hover:text-foreground">Pacientes</a>
+					<a href={resolve('/(app)/follow-ups')} class="hover:text-foreground">Seguimientos</a>
+					<a href={resolve('/(app)/precios')} class="hover:text-foreground">Prácticas</a>
+					<a href={resolve('/(app)/facturas')} class="hover:text-foreground">Facturas</a>
+				</nav>
 			</div>
 			<div class="flex items-center gap-3 text-sm">
 				<span class="text-muted-foreground">{data.user.name}</span>

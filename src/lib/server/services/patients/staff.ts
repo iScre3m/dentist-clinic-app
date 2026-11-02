@@ -7,10 +7,10 @@ import { and, count, eq, gte, isNull, ne, or } from 'drizzle-orm';
 import { normalizeMobile, type PhoneFailure } from './phone.ts';
 
 export type StaffFailure = PhoneFailure | 'phone-taken' | 'not-found';
-export type StaffResult = { ok: true; phoneChanged?: boolean } | { ok: false; reason: StaffFailure };
+export type StaffResult =
+	{ ok: true; phoneChanged?: boolean } | { ok: false; reason: StaffFailure };
 export type VerifyResult =
-	| { ok: true; alreadyVerified: boolean }
-	| { ok: false; reason: 'not-found' };
+	{ ok: true; alreadyVerified: boolean } | { ok: false; reason: 'not-found' };
 export type ArchiveResult =
 	| { ok: true }
 	| { ok: false; reason: 'has-future-appointments'; count: number }
@@ -38,7 +38,10 @@ function isConstraintError(value: unknown): boolean {
  * message instead of a database error. When the number changes, the
  * verification is cleared: staff have to confirm the new number again.
  */
-export async function updateContact(patientId: string, input: StaffEditInput): Promise<StaffResult> {
+export async function updateContact(
+	patientId: string,
+	input: StaffEditInput
+): Promise<StaffResult> {
 	const current = await getPatient(patientId);
 	if (!current) return { ok: false, reason: 'not-found' };
 

@@ -2,606 +2,304 @@
 
 ## Overview
 
-This design document outlines the architecture and implementation approach for adding professional invoice functionality to the WhatsApp messaging system. The feature enables dental staff to send itemized invoices to patients after appointments via WhatsApp, integrating seamlessly with the existing SvelteKit + Drizzle ORM + SQLite architecture.
+This design adds manual itemized invoices to the existing SvelteKit + Drizzle + SQLite application. It follows the conventions already established in `src/lib/server/db/schema.ts`, the WhatsApp service, and the `(app)` routes (see `turnos/[id]/recordatorio` as the reference pattern). No REST API layer is introduced: pages use SvelteKit load functions and form actions with `requireUser`, server-side Valibot validation, and Spanish error copy.
+
+Decisions locked in for this design:
+
+- This feature is an explicit scope extension of `AGENTS.md` (billing was out of scope).
+- Appointment services are added manually by staff via a multi-select of active service types.
+- The schema follows the existing repo conventions exactly (text UUIDs, `nowMs`, `user` table references, Drizzle enums in the established style, Valibot schemas separate from Drizzle).
+- The `wa.me` link is rendered as a plain `<a>` in the page markup; it is never opened from a server action or after an `await`.
 
 ## Architecture
 
-### System Components
-
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Frontend UI Layer                             │
-│  ┌─────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
-│  │ PricingManager   │  │ InvoiceGenerator │  │ WhatsAppSender   │   │
-│  │   (Svelte)       │  │   (Svelte)       │  │   (Svelte)       │   │
-│  └─────────────────┘  └──────────────────┘  └──────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                        API Endpoints Layer                           │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
-│  │ /api/prices      │  │ /api/invoices    │  │ /api/whatsapp    │   │
-│  │   (server.ts)    │  │   (server.ts)    │  │   (server.ts)    │   │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Service Layer                                 │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
-│  │  PricingService  │  │  InvoiceService  │  │ WhatsAppService  │   │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Database Layer (Drizzle ORM)                  │
-│  ┌───────────────────────────────────────────────────────────────┐  │
-│  │  SQLite Database with new tables:                             │  │
-│  │  - service_prices (for current prices)                        │  │
-│  │  - invoice_history (for invoice audit trail)                  │  │
-│  └───────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
+Frontend pages (load + form actions, no /api layer)
+  (app)/precios               → pricing management
+  (app)/turnos/[id]/factura   → services on appointment + invoice generate/preview/send
+  (app)/facturas              → invoice history
+        ↓
+Service layer (src/lib/server/services/)
+  services/pricing/index.ts       → service type prices (no change log, see Table section)
+  services/invoices/index.ts      → invoice snapshots, totals, resend logic
+  services/whatsapp/index.ts      → existing: TEMPLATES, renderTemplate, buildWaMeLink
+        ↓
+Database (Drizzle ORM, SQLite, migrations via drizzle-kit)
+  New tables: service_prices, appointment_services, invoice_history
+  Modified:   reminder_records.purpose gains 'invoice'
 ```
 
 ## Data Models
 
-### Service Prices
+Style rules taken from the existing schema: `text` primary keys with UUIDs, `integer(..., { mode: 'timestamp_ms' })` with `default(nowMs)`, `boolean` via `integer(..., { mode: 'boolean' })`, Drizzle `enum` texts, declared indexes/unique indexes in the table callback.
+
+### Service prices (new)
 
 ```typescript
-import { sqliteTable, text, integer, boolean } from 'drizzle-orm/sqlite-core';
+import { boolean, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { user } from './schema'; // same file, references below
 
-export const servicePrices = sqliteTable('service_prices', {
-  id: text('id').primaryKey(),
-  serviceType: text('service_type').notNull().unique(),
-  name: text('name').notNull(),
-  price: integer('price').notNull(),
-  currency: text('currency', { enum: ['ARS'] }).notNull().default('ARS'),
-  isActive: boolean('is_active').notNull().default(true),
-  updatedBy: text('updated_by')
-    .notNull()
-    .references(() => user.id),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`)
-});
-
-export type ServicePrice = typeof servicePrices.$inferSelect;
-export type NewServicePrice = typeof servicePrices.$inferInsert;
-```
-
-### Invoice History
-
-```typescript
-export const invoiceHistory = sqliteTable('invoice_history', {
-  id: text('id').primaryKey(),
-  invoiceNumber: text('invoice_number').notNull().unique(),
-  appointmentId: text('appointment_id')
-    .notNull()
-    .references(() => appointments.id, { onDelete: 'cascade' }),
-  patientId: text('patient_id')
-    .notNull()
-    .references(() => patients.id),
-  patientName: text('patient_name').notNull(),
-  patientPhone: text('patient_phone').notNull(),
-  invoiceDate: text('invoice_date').notNull(),
-  services: text('services', { mode: 'json' }).notNull(),
-  subtotal: integer('subtotal').notNull(),
-  total: integer('total').notNull(),
-  currency: text('currency', { enum: ['ARS'] }).notNull().default('ARS'),
-  staffId: text('staff_id')
-    .notNull()
-    .references(() => user.id),
-  staffName: text('staff_name').notNull(),
-  status: text('status', { enum: ['generated', 'sent', 'resent'] })
-    .notNull()
-    .default('generated'),
-  whatsappRecordedAt: integer('whatsapp_recorded_at', { mode: 'timestamp_ms' }),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`)
-});
-
-export type InvoiceHistory = typeof invoiceHistory.$inferSelect;
-export type NewInvoiceHistory = typeof invoiceHistory.$inferInsert;
-```
-
-## Components and Interfaces
-
-### 1. Pricing Management Interface
-
-**Route:** `/pricing` (new page)
-
-**Components:**
-- `PricingManager.svelte` - Main container component
-- `ServicePriceRow.svelte` - Individual service price display and edit
-- `PriceChangeModal.svelte` - Modal for price changes with history
-
-**API Endpoints:**
-- `GET /api/prices` - Retrieve all active service prices
-- `POST /api/prices` - Update service price
-
-**Request/Response:**
-
-**GET /api/prices Response:**
-```json
-{
-  "prices": [
-    {
-      "id": "uuid-1",
-      "serviceType": "consultation",
-      "name": "Consultoria",
-      "price": 5500,
-      "currency": "ARS",
-      "isActive": true,
-      "updatedBy": "staff-id",
-      "updatedAt": "2024-01-15T10:30:00Z"
-    }
-  ]
-}
-```
-
-**POST /api/prices Request:**
-```json
-{
-  "serviceType": "consultation",
-  "price": 5500,
-  "reason": "Annual price adjustment"
-}
-```
-
-**POST /api/prices Response:**
-```json
-{
-  "success": true,
-  "updatedPrice": {
-    "id": "uuid-1",
-    "serviceType": "consultation",
-    "name": "Consultoria",
-    "price": 5500,
-    "currency": "ARS",
-    "isActive": true
-  }
-}
-```
-
-### 2. Invoice Generation Interface
-
-**Route:** `/turnos/[id]/factura` (new sub-route)
-
-**Components:**
-- `InvoiceGenerator.svelte` - Main invoice generation interface
-- `InvoicePreview.svelte` - Invoice data preview before sending
-
-**API Endpoints:**
-- `GET /api/invoices/appointment/:id` - Get invoice data for appointment
-- `POST /api/invoices` - Generate invoice
-
-**Request/Response:**
-
-**GET /api/invoices/appointment/:id Response:**
-```json
-{
-  "appointment": {
-    "id": "appointment-uuid",
-    "summary": "Chequeo general",
-    "startsAt": "2024-01-20T10:00:00Z",
-    "endsAt": "2024-01-20T11:00:00Z"
-  },
-  "patient": {
-    "id": "patient-uuid",
-    "name": "Juan Perez",
-    "phone": "+5491112345678",
-    "whatsappConsent": "granted"
-  },
-  "services": [
-    {
-      "serviceType": "consultation",
-      "name": "Consultoria",
-      "price": 5500,
-      "quantity": 1,
-      "subtotal": 5500
-    }
-  ],
-  "subtotal": 13500,
-  "currency": "ARS"
-}
-```
-
-**POST /api/invoices Request:**
-```json
-{
-  "appointmentId": "appointment-uuid",
-  "services": [
-    {
-      "serviceType": "consultation",
-      "name": "Consultoria",
-      "price": 5500,
-      "quantity": 1,
-      "subtotal": 5500
-    }
-  ],
-  "subtotal": 5500,
-  "currency": "ARS"
-}
-```
-
-**POST /api/invoices Response:**
-```json
-{
-  "success": true,
-  "invoice": {
-    "id": "invoice-uuid",
-    "invoiceNumber": "INV-2024-001",
-    "appointmentId": "appointment-uuid",
-    "patientName": "Juan Perez",
-    "patientPhone": "+5491112345678",
-    "invoiceDate": "2024-01-15",
-    "services": [...],
-    "subtotal": 5500,
-    "total": 5500,
-    "currency": "ARS"
-  }
-}
-```
-
-### 3. WhatsApp Invoice Sender
-
-**Route:** `/turnos/[id]/factura/enviar` (new sub-route)
-
-**Components:**
-- `WhatsAppInvoiceSender.svelte` - Main WhatsApp sending interface
-
-**API Endpoints:**
-- `POST /api/whatsapp/invoice` - Send invoice via WhatsApp
-
-**Request/Response:**
-
-**POST /api/whatsapp/invoice Request:**
-```json
-{
-  "invoiceId": "invoice-uuid"
-}
-```
-
-**POST /api/whatsapp/invoice Response:**
-```json
-{
-  "success": true,
-  "waLink": "https://wa.me/5491112345678?text=...",
-  "messagePreview": "Invoice message text..."
-}
-```
-
-## Database Schema
-
-### Migration File: `0004_invoicing_system.sql`
-
-```sql
--- Service Prices Table
-CREATE TABLE service_prices (
-    id TEXT PRIMARY KEY NOT NULL,
-    service_type TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    price INTEGER NOT NULL,
-    currency TEXT NOT NULL DEFAULT 'ARS',
-    is_active BOOLEAN NOT NULL DEFAULT 1,
-    updated_by TEXT NOT NULL REFERENCES user(id),
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+export const servicePrices = sqliteTable(
+	'service_prices',
+	{
+		id: text('id').primaryKey(),
+		serviceType: text('service_type').notNull(),
+		name: text('name').notNull(),
+		price: integer('price').notNull(), // ARS pesos, no decimals
+		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+		updatedBy: text('updated_by')
+			.notNull()
+			.references(() => user.id),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
+	},
+	(t) => [
+		uniqueIndex('service_prices_service_type_unique').on(t.serviceType),
+		index('service_prices_is_active_idx').on(t.isActive)
+	]
 );
+```
 
-CREATE INDEX service_prices_service_type_idx ON service_prices(service_type);
-CREATE INDEX service_prices_is_active_idx ON service_prices(is_active);
+### Price updates (decision: no change log)
 
--- Invoice History Table
-CREATE TABLE invoice_history (
-    id TEXT PRIMARY KEY NOT NULL,
-    invoice_number TEXT NOT NULL UNIQUE,
-    appointment_id TEXT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
-    patient_id TEXT NOT NULL REFERENCES patients(id),
-    patient_name TEXT NOT NULL,
-    patient_phone TEXT NOT NULL,
-    invoice_date TEXT NOT NULL,
-    services TEXT NOT NULL,
-    subtotal INTEGER NOT NULL,
-    total INTEGER NOT NULL,
-    currency TEXT NOT NULL DEFAULT 'ARS',
-    staff_id TEXT NOT NULL REFERENCES user(id),
-    staff_name TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'generated',
-    whatsapp_recorded_at INTEGER,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+There is **no** `service_price_changes` table and no written reason per change. Rationale: invoices always snapshot prices at generation time, so a change log has no user-facing or functional purpose — it would be retained merely as history, which contradicts the flat 90-day retention stance ("no reason to keep information longer than 90 days"). An update simply writes the new `price`, `updatedBy`, and `updatedAt` on the `service_prices` row; the `/precios` page shows the last update (price, who, when) per service type, which covers the practice's need to see recency without keeping history. Deactivation stays `isActive = false` on the same row.
+
+### Appointment services (new)
+
+The source of "services performed during this appointment". Staff add them via a multi-select of active service types; quantity defaults to 1 and is editable. Unique on `(appointment_id, service_price_id)` so selecting an already-added type adds to the existing row instead of duplicating.
+
+```typescript
+export const appointmentServices = sqliteTable(
+	'appointment_services',
+	{
+		id: text('id').primaryKey(),
+		appointmentId: text('appointment_id')
+			.notNull()
+			.references(() => appointments.id, { onDelete: 'cascade' }),
+		servicePriceId: text('service_price_id')
+			.notNull()
+			.references(() => servicePrices.id, { onDelete: 'restrict' }),
+		quantity: integer('quantity').notNull().default(1),
+		addedBy: text('added_by')
+			.notNull()
+			.references(() => user.id),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
+	},
+	(t) => [
+		uniqueIndex('appointment_services_unique').on(t.appointmentId, t.servicePriceId),
+		index('appointment_services_appointment_idx').on(t.appointmentId)
+	]
 );
-
-CREATE INDEX invoice_history_appointment_idx ON invoice_history(appointment_id);
-CREATE INDEX invoice_history_patient_idx ON invoice_history(patient_id);
-CREATE INDEX invoice_history_status_idx ON invoice_history(status);
-CREATE INDEX invoice_history_created_at_idx ON invoice_history(created_at);
-CREATE INDEX invoice_history_invoice_number_idx ON invoice_history(invoice_number);
 ```
 
-## Integration Points
+`onDelete: 'restrict'` on `servicePriceId`: deactivating a service type must not break historical appointment services; deactivation (`isActive = false`) replaces deletion entirely.
 
-### Existing WhatsApp Infrastructure
+### Invoice history (new)
 
-The design integrates with the existing WhatsApp infrastructure in `src/lib/server/services/whatsapp/index.ts`:
-
-1. **Template Rendering:** Uses existing `renderTemplate()` function
-2. **wa.me Link Building:** Uses existing `buildWaMeLink()` function
-3. **Message Format:** Follows existing WhatsApp message conventions
-
-### New WhatsApp Template
+An immutable snapshot. No invoice number (numbering is excluded); the row `id` and `created_at` identify it. Patient name and phone are snapshotted deliberately (historical accuracy if the patient's data is later corrected); staff is referenced by id only and joined for display, per the no-duplication convention.
 
 ```typescript
-// Add to TEMPLATES object
-invoice: `*Factura {invoice_number}*\n\nPaciente: {patient_name}\nFecha: {invoice_date}\n\nServicios:\n{services_list}\n\nSubtotal: ${subtotal}\nTotal: ${total}\n\nConsultorio Dra. Laura\nTelefono: +54 9 11 1111 1111`
+export const invoiceHistory = sqliteTable(
+	'invoice_history',
+	{
+		id: text('id').primaryKey(),
+		appointmentId: text('appointment_id')
+			.notNull()
+			.references(() => appointments.id, { onDelete: 'cascade' }),
+		patientId: text('patient_id')
+			.notNull()
+			.references(() => patients.id),
+		patientName: text('patient_name').notNull(), // snapshot
+		patientPhone: text('patient_phone').notNull(), // snapshot, E.164
+		appointmentStartsAt: integer('appointment_starts_at', { mode: 'timestamp_ms' }).notNull(),
+		services: text('services', { mode: 'json' }).notNull(), // SnapshotItem[]
+		subtotal: integer('subtotal').notNull(),
+		total: integer('total').notNull(),
+		createdBy: text('created_by')
+			.notNull()
+			.references(() => user.id),
+		status: text('status', { enum: ['generated', 'sent', 'resent'] })
+			.notNull()
+			.default('generated'),
+		sentAt: integer('sent_at', { mode: 'timestamp_ms' }),
+		resentReason: text('resent_reason'),
+		resentOf: text('resent_of').references(() => invoiceHistory.id), // original invoice on a resend
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
+	},
+	(t) => [
+		index('invoice_history_appointment_idx').on(t.appointmentId),
+		index('invoice_history_patient_idx').on(t.patientId),
+		index('invoice_history_status_idx').on(t.status),
+		index('invoice_history_created_at_idx').on(t.createdAt)
+	]
+);
 ```
 
-### Reminder Records Integration
+`SnapshotItem` type (validated with Valibot when reading):
 
-Invoices are recorded in the existing `reminder_records` table:
-- `purpose`: 'invoice'
-- `template_key`: 'invoice'
-- `status`: 'sent' (when delivered)
-- Records both initial sending and resends
-
-## Error Handling
-
-### 1. Missing Service Prices
-
-**Scenario:** Attempting to generate invoice when some services have no price.
-
-**Handling:**
-- Validate all services have prices before generation
-- Return specific error message listing missing prices
-- Allow staff to add missing prices before retrying
-
-**Response:**
-```json
-{
-  "success": false,
-  "error": "Missing service prices",
-  "missingPrices": ["extraction"]
-}
-```
-
-### 2. Patient WhatsApp Consent
-
-**Scenario:** Patient has not consented to WhatsApp messages.
-
-**Handling:**
-- Check consent before generating WhatsApp link
-- Return clear error message
-- Allow alternative delivery methods (print, email)
-
-**Response:**
-```json
-{
-  "success": false,
-  "error": "Patient has not consented to WhatsApp messages"
-}
-```
-
-### 3. Invoice Already Sent
-
-**Scenario:** Staff attempts to send invoice that was already sent.
-
-**Handling:**
-- Check current status
-- Require confirmation for resending
-- Create new record with 'resent' status
-- Update reminder_records with resent flag
-
-**Response:**
-```json
-{
-  "success": true,
-  "action": "resent",
-  "message": "Invoice resent successfully"
-}
-```
-
-### 4. Invalid Patient Phone
-
-**Scenario:** Patient's phone number is missing or invalid.
-
-**Handling:**
-- Validate phone format before building WhatsApp link
-- Return specific error message
-- Allow manual phone entry or alternative delivery
-
-**Response:**
-```json
-{
-  "success": false,
-  "error": "Invalid or missing phone number"
-}
-```
-
-### 5. Appointment Without Services
-
-**Scenario:** Attempting to generate invoice for appointment with no recorded services.
-
-**Handling:**
-- Validate services exist before generation
-- Prevent invoice creation
-- Allow staff to add service information to appointment first
-
-**Response:**
-```json
-{
-  "success": false,
-  "error": "No services recorded for this appointment"
-}
-```
-
-### 6. Price History Accuracy
-
-**Scenario:** Invoice needs to show price that was current at time of invoice generation, not current price.
-
-**Handling:**
-- Snapshot prices at invoice generation time
-- Store in `services` JSON field
-- Use historical prices for any future invoice review
-
-**Implementation:**
 ```typescript
-// Store snapshot of prices at invoice generation time
-const serviceSnapshot = {
-  serviceType: service.serviceType,
-  name: currentPrice.name,
-  price: currentPrice.price,
-  quantity: service.quantity,
-  subtotal: currentPrice.price * service.quantity
+type SnapshotItem = {
+	serviceType: string;
+	name: string;
+	price: number;
+	quantity: number;
+	subtotal: number;
 };
 ```
 
-### 7. Concurrent Price Updates
+### Reminder records (modified)
 
-**Scenario:** Price updated while staff is preparing invoice.
+`purpose` gains `'invoice'`; `templateKey` is `'invoice'`. Everything else is unchanged (no message bodies, no provider IDs).
 
-**Handling:**
-- Snapshot prices at invoice generation time
-- Invoice uses prices that were current at that moment
-- Staff sees snapshot, not real-time prices
-
-**Implementation:**
 ```typescript
-// Get prices at invoice generation time
-const pricesAtGeneration = await getCurrentPrices();
-
-// Use these prices for invoice calculation
-const invoiceServices = appointmentServices.map(s => ({
-  ...s,
-  price: pricesAtGeneration[s.serviceType].price,
-  subtotal: pricesAtGeneration[s.serviceType].price * s.quantity
-}));
+purpose: text('purpose', { enum: ['reminder', 'confirmation', 'follow_up', 'resend', 'invoice'] });
 ```
+
+## Migration
+
+Generated with `pnpm db:generate` (single migration `0004_*` creating the four new tables and, if the enum is declared as a raw text column, no data change is needed for `reminder_records`). Run with `pnpm db:migrate`.
+
+Conventions from the repo apply: WAL mode, transactions via `db.transaction` for multi-step writes, foreign keys enforced.
+
+### Retention (90 days, flat)
+
+`pnpm db:prune` extends its existing 90-day policy to the new tables — nothing billing-related is kept longer than that:
+
+- `invoice_history`: rows with `created_at` older than 90 days. Appointment cleanups cascade here too (`appointment_id ON DELETE CASCADE`), so an appointment removed by the existing prune takes its services and invoices with it.
+- `service_prices` is not pruned and is never deleted: it is the practice's catalog, kept indefinitely. Deactivation (`isActive = false`) is the only "removal" and preserves the row.
+- Existing `reminder_records` appointments prune behavior is unchanged; invoice-related reminder records are inside the already-pruned set.
+
+## Valibot Schemas
+
+New files, independent from the Drizzle schema:
+
+- `src/lib/schemas/service-price.schema.ts` — create/update price: `serviceType` (kebab-case slug), `name` (1–60 chars), `price` (integer ≥ 0), `isActive`. No `reason` field (no change log exists).
+- `src/lib/schemas/invoice.schema.ts` — add service action: `servicePriceId` (uuid), `quantity` (1–99); generate invoice: `appointmentId` (uuid); resend: `reason` (1–200 chars).
+
+Form actions validate with these schemas on the server; client-side hints are cosmetic only.
+
+## Service Layer
+
+### `services/pricing/index.ts`
+
+- `listServicePrices()` — all rows, active first (alphabetical).
+- `listActiveServicePrices()` — for the multi-select on the invoice page.
+- `getPriceForService(serviceType)`.
+- `hasAllPrices(servicePriceIds)` → `{ ok: true } | { ok: false, missing: string[] }`.
+- `updatePrice({ servicePriceId, newPrice }, staffId)` — plain update of `price`, `updatedBy`, `updatedAt`; no history row.
+- `createServicePrice({ serviceType, name, price }, staffId)`.
+- `setActive(servicePriceId, isActive, staffId)` — deactivation (`isActive = false`) preserves the row; always allowed.
+
+### `services/invoices/index.ts`
+
+- `addService(appointmentId, servicePriceId, quantity, staffId)` — upsert on the unique pair (re-select increments `quantity`; keep the `nowMs` update).
+- `removeService(appointmentServiceId, staffId)`.
+- `getInvoiceData(appointmentId)` — appointment + patient + appointment services joined with current prices; returns guards' results as a discriminated union used by the page and enforced again in the action:
+  - appointment must exist, `calendarStatus === 'confirmed'`, `startsAt` in the past, patient linked, patient not archived.
+  - ≥ 1 appointment service; every service type priced.
+- `generateInvoice(appointmentId, staffId)` — transaction: read appointment services + current prices, compute subtotals/total, insert `invoice_history` with the snapshot, return the row. Duplicates allowed (a regen creates a new snapshot; the UI lists them newest-first and only the latest is actionable for sending).
+- `markSent(invoiceId, staffId)` — status `'sent'`, `sentAt`; inserts the `reminder_records` row (purpose `'invoice'`) in the same transaction. This runs _after_ the assistant opens WhatsApp from the plain link and confirms — the record is confirmation, not the send.
+- `markSkipped(invoiceId, staffId, reason)` — leaves a `skipped` reminder record; invoice stays `'generated'`.
+- `resendInvoice(originalInvoiceId, reason, staffId)` — requires the original to be `'sent'` or `'resent'`; generates a fresh snapshot (prices may have changed), inserts a new row with status `'resent'`, `resentReason`, `resentOf` (and inserts nothing into `reminder_records` until the new send is confirmed, which then uses purpose `'invoice'` since `'resend'` is reserved for reminder resends).
+- `listInvoicesByPatient(patientId)` / `listInvoicesByAppointment(appointmentId)`.
+
+### WhatsApp template
+
+Follows the existing `TEMPLATES` / `{{var}}` convention in `src/lib/server/services/whatsapp/index.ts` (the current system of record for templates; migrating them to `templates/whatsapp/reminder.es.md` is a separate concern and out of scope):
+
+```typescript
+invoice: 'Hola {{nombre}}, te enviamos el detalle de tu consulta del {{fecha}} en {{consultorio}}:\n\n{{servicios}}\n\nTotal: ${{total}}\n\nGracias por tu visita. Ante cualquier consulta, escribinos por acá.';
+```
+
+`{{servicios}}` is rendered by the invoice service as one line per item (`'1. Consulta — $5500'` style: `quantity × name — $subtotal`), because a flat template string cannot hold a variable-length list. Currency formatting uses `Intl` for `es-AR`. Fallback if the template is missing: `renderTemplate` already returns `''` for unknown keys; the invoice service checks for empty render and throws a Spanish error instead of sending a broken message.
+
+`buildWaMeLink` (digits only, contracted) is reused unchanged; generated URLs are never logged.
+
+## Pages and Actions
+
+### `(app)/precios` — pricing management
+
+- **Load:** `listServicePrices()` with `updatedBy` joined for display (last price + who/when per type).
+- **Components:** list rows (type, name, ARS price, active badge, last update by) + "Nueva práctica" (create) + edit dialog (new price) + activate/deactivate.
+- **Actions:** `create`, `update`, `set_active`. All guarded by `requireUser`; errors rendered inline in Spanish.
+- Explicit empty state when no service types exist ("Cargá la primera práctica para poder facturar") with the create action.
+
+### `(app)/turnos/[id]/factura` — appointment invoice (one page, mirrors `recordatorio`)
+
+- **Guards in load + re-checked in actions** (Spanish 4xx errors, same style as `recordatorio`): appointment exists, linked patient, patient not archived, `calendarStatus === 'confirmed'`, `startsAt` in the past.
+- **Sections:**
+  1. **Servicios del turno** — multi-select of active service types (checkbox-style list inside a shadcn-svelte popover/dropdown) with per-row quantity stepper and remove button; saved via form actions (`add_service`, `remove_service`, `set_quantity`).
+  2. **Factura** — itemized preview: per-service quantity × name × snapshot price → subtotal, grand total, patient name/phone, appointment date (formatted `es-AR` / `America/Argentina/Buenos_Aires`), clinic info from env. Blocked states render the specific Spanish error and hide the invoice (no services / missing prices, listing `name`s / cancelled / future appointment).
+  3. **Enviar por WhatsApp** — shown only when consent = granted, no opt-out, phone valid. The message preview and the **plain `<a href="https://wa.me/...?text=...">`** (digits only) are rendered by the load function; the anchor has `target="_blank" rel="noopener"`. Copy-to-clipboard button with selectable-text fallback. A separate form action records confirmation: `mark_sent` (or `mark_skipped` with optional reason) — this action never builds the link itself.
+  4. **Historial de facturas del turno** — previous snapshots (date, total, status), with **Reenviar** (confirmation dialog + required reason) creating a `'resent'` snapshot; the fresh message + plain link renders after the action returns.
+- Patient-level exceptions (denied consent, opt-out, invalid phone) show inline explanatory copy and no link, never a disabled grayed-out button.
+
+### `(app)/facturas` — invoice history
+
+- **Load:** latest 20 invoices, filters via query params: date range, patient name search, status.
+- **Actions:** none (read-only view; resend happens from the appointment page where the snapshot can be rebuilt).
+- Empty state: "No hay facturas todavía".
+
+### Navigation
+
+- Pricing and history links from the app header/nav alongside pacientes, turnos, follow-ups.
+- Appointment rows / appointment detail gain a **Factura** link (only meaningful for past appointments; keep it visible — the page's guard explains itself).
+
+### Clinic configuration
+
+New env vars (documented placeholders in `.env.example`):
+
+```
+CLINIC_NAME="Consultorio Dra. Laura"
+CLINIC_PHONE="+54 9 11 5555 5555"
+CLINIC_ADDRESS="Calle Falsa 123, CABA"
+```
+
+Read server-side only; missing values fail with a clear startup/validation error rather than rendering an incomplete invoice.
+
+## Error Handling Summary
+
+| Scenario                                 | Behavior                                                                      |
+| ---------------------------------------- | ----------------------------------------------------------------------------- |
+| No services recorded                     | Block generation; inline Spanish message telling staff to add services        |
+| Service type without price               | Block generation; list which practices lack pricing with a link to `/precios` |
+| Cancelled/deleted appointment            | Block generation                                                              |
+| Future appointment                       | Block generation ("las facturas se emiten después del turno")                 |
+| Patient missing/archived                 | Block generation                                                              |
+| Consent denied / opt-out / invalid phone | Hide the WhatsApp section entirely; show the reason inline                    |
+| Already sent invoice                     | Send button replaced by "Reenviar" flow (confirm + required reason)           |
+| Empty/incomplete message render          | Service throws; inline error, no link rendered                                |
+| Missing clinic env vars                  | Clear startup error; invoice page blocks with guidance                        |
 
 ## Correctness Properties
 
-### Property 2: Invoice Price Snapshot
-
-*For any* invoice generated, the services stored should use prices that were current at the time of generation, not any subsequent price changes.
-
-**Validates: Requirements 1.4, 2.6**
-
-**Test Strategy:** Generate random invoice, then update the price, then verify the invoice still shows the original price. Test with multiple price changes over time.
-
-### Property 3: WhatsApp Consent Enforcement
-
-*For any* invoice send attempt, if the patient has not granted WhatsApp consent or has opted out, the system should prevent delivery and return an appropriate error.
-
-**Validates: Requirements 3.3, 3.4**
-
-**Test Strategy:** Generate invoices for patients with various consent states (granted, denied, opted out). Verify delivery is prevented and correct error is returned.
-
-### Property 4: Invoice Number Uniqueness
-
-*For any* invoice generation request, the system should create a unique invoice number and reject duplicate requests.
-
-**Validates: Requirements 4.1**
-
-**Test Strategy:** Generate multiple invoices rapidly in parallel. Verify all invoice numbers are unique and no duplicates are created.
-
-### Property 5: Invoice Status Sequence
-
-*For any* invoice, the status should follow a valid sequence (generated → sent → resent) and prevent invalid transitions.
-
-**Validates: Requirements 4.3**
-
-**Test Strategy:** Test all valid status transitions and verify invalid transitions are rejected with appropriate errors.
-
-### Property 6: Invoice Number Format
-
-*For any* invoice generated, the invoice number should follow the format 'INV-YYYY-NNN' where YYYY is the current year and NNN is a sequential number.
-
-**Validates: Requirements 4.1**
-
-**Test Strategy:** Generate invoices across multiple years and verify the format is consistent and sequential.
+1. **Price snapshot** — for any invoice, its stored per-item prices equal the `service_prices` values current at generation; later changes never mutate existing snapshots. (Req 1.4, 3.5)
+2. **Consent enforcement** — for any invoice send path, patients with `whatsappConsent !== 'granted'`, an `optedOutAt` value, or an invalid phone never render a link and never reach `markSent`. (Req 4.4, 4.5)
+3. **Send is explicit** — `sentAt`/`'sent'` status and the `reminder_records` row are written only by staff confirmation actions, never as a side effect of generating or rendering. (Req 4.6)
+4. **Resend requires reason** — a `'resent'` snapshot always has a non-empty `resentReason`, `resentOf`, and a new snapshot of current prices. (Req 5.3)
+5. **Totals are derivable** — for any invoice snapshot, `total === Σ(subtotal_i)` and `subtotal_i === price_i × quantity_i`. (Req 3.1, 3.2)
+6. **No duplicate appointment-service rows** — adding an existing type again updates the row's quantity instead of creating a second row. (Req 2.2)
+7. **Protected access** — every load/action touching pricing, services, invoices, or history requires an authenticated session. (Security section of AGENTS.md)
 
 ## Testing Strategy
 
-### Unit Tests
+Unit (Vitest, mocked `better-sqlite3`/in-memory DB where the repo tests do the same):
 
-1. **Pricing Service:**
-   - Price retrieval returns correct data
-   - Price updates create history records
-   - Missing prices validation works
+1. Pricing: list/create/update, `updatedAt`/`updatedBy` recorded on change, `hasAllPrices` with missing/inactive entries.
+2. Invoice service: guards (cancelled, future, archived, no services, missing prices), snapshot integrity, totals math, upsert-on-reselect, `markSent`/`markSkipped` reminder records, resend reason enforcement.
+3. WhatsApp: invoice template rendering (list interpolation, empty-render fallback), `buildWaMeLink` digits-only.
+4. Schemas: Valibot bounds (quantity 1–99, price ≥ 0, resend reason required).
 
-2. **Invoice Service:**
-   - Invoice generation creates records
-   - Totals calculation is accurate
-   - Price snapshotting works correctly
+Property-based (small generators; note repo tooling may not include fast-check — if not installed, cover each property with many fixed cases instead of adding a dependency, per "avoid new dependencies"):
 
-3. **WhatsApp Service:**
-   - WhatsApp link generation works
-   - Consent validation works
-   - Patient validation works
+- Properties 1, 2, 5, 6 from the correctness list across randomized service/quantity/price combinations.
 
-### Integration Tests
+E2E (Playwright, FAKE_CALENDAR fixtures, never opening real `wa.me` links):
 
-1. **End-to-End Invoice Generation:**
-   - Complete invoice generation flow
-   - Price snapshotting with history
-   - WhatsApp integration
+- Add services → generate → see preview + plain anchor → confirm sent → history shows it; dashboard/patient views unaffected.
+- Block paths: no services, cancelled appointment, denied consent (no link), resend forced confirmation.
 
-2. **Price History Accuracy:**
-   - Invoice shows correct historical price
-   - Price changes don't affect existing invoices
+## Out of Scope (unchanged)
 
-3. **WhatsApp Integration:**
-   - Consent checking
-   - Phone validation
-   - Reminder records creation
-
-### Property-Based Testing
-
-See Correctness Properties section above for specific properties to test with property-based testing libraries.
-
-## Implementation Checklist
-
-### Phase 1: Database Schema
-- [ ] Create `service_prices` table
-- [ ] Create `invoice_history` table
-- [ ] Create database migration scripts
-- [ ] Update Drizzle schema definitions
-
-### Phase 2: Backend Services
-- [ ] Implement PricingService methods
-- [ ] Implement InvoiceService methods
-- [ ] Update WhatsApp service with invoice template
-- [ ] Implement API endpoints
-
-### Phase 3: Frontend Components
-- [ ] Create PricingManager.svelte
-- [ ] Create ServicePriceRow.svelte
-- [ ] Create InvoiceGenerator.svelte
-- [ ] Create InvoicePreview.svelte
-- [ ] Create WhatsAppInvoiceSender.svelte
-
-### Phase 4: Integration
-- [ ] Connect frontend to API endpoints
-- [ ] Implement pricing management UI
-- [ ] Implement invoice generation flow
-- [ ] Implement WhatsApp sending flow
-- [ ] Implement invoice history display
-
-### Phase 5: Testing
-- [ ] Write unit tests
-- [ ] Write integration tests
-- [ ] Test error handling scenarios
-- [ ] Test price history accuracy
-- [ ] Test WhatsApp consent validation
-
-### Phase 6: Documentation
-- [ ] Update user documentation
-- [ ] Create staff training materials
-- [ ] Document API endpoints
-- [ ] Document data models
-
-## Conclusion
-
-This design provides a comprehensive blueprint for implementing WhatsApp invoice functionality in the Dentist Admin application. The solution leverages the existing architecture patterns and integrates seamlessly with the current WhatsApp infrastructure while maintaining data integrity and providing a robust user interface for staff.
+Accounting/payments, taxes, multi-currency, PDFs/logo, invoice numbering, refunds, automatic sending, editing a generated invoice's fields, migrating templates to the `.md` file (existing behavior kept).

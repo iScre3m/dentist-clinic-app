@@ -34,7 +34,10 @@
 	<title>Ingresar · Consultorio</title>
 </svelte:head>
 
-<main class="bg-muted/40 flex min-h-screen items-center justify-center px-6 py-12" style="background-image: url('/imagen-2.jpg'); background-size: cover; background-position: center;">
+<main
+	class="bg-muted/40 flex min-h-screen items-center justify-center px-6 py-12"
+	style="background-image: url('/imagen-2.jpg'); background-size: cover; background-position: center;"
+>
 	<Card.Root class="w-full max-w-sm">
 		<Card.Header>
 			<Card.Title>Consultorio</Card.Title>

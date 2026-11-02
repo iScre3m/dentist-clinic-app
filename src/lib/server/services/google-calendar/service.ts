@@ -111,8 +111,12 @@ export class GoogleCalendarService {
 			const saBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 			if (!saBase64) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON no está definido.');
 			this.provider = {
-				async fetchEvents() { return []; },
-				async fetchEventsWithToken() { return { items: [], nextSyncToken: '' }; }
+				async fetchEvents() {
+					return [];
+				},
+				async fetchEventsWithToken() {
+					return { items: [], nextSyncToken: '' };
+				}
 			};
 		}
 	}
@@ -167,7 +171,12 @@ export class GoogleCalendarService {
 		const existing = await db
 			.select()
 			.from(appointments)
-			.where(and(eq(appointments.googleCalendarId, calendarId), eq(appointments.googleEventId, ev.eventId ?? '')))
+			.where(
+				and(
+					eq(appointments.googleCalendarId, calendarId),
+					eq(appointments.googleEventId, ev.eventId ?? '')
+				)
+			)
 			.limit(1);
 		if (existing.length > 0) {
 			await db
@@ -177,12 +186,17 @@ export class GoogleCalendarService {
 					summary: ev.summary ?? 'Sin título',
 					allDay: ev.allDay ?? false,
 					localDate: ev.localDate ?? null,
-startsAt: ev.startsAt ? new Date(ev.startsAt) : null,
-endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
+					startsAt: ev.startsAt ? new Date(ev.startsAt) : null,
+					endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
 					calendarStatus: ev.status === 'cancelled' ? 'cancelled' : 'confirmed',
 					recurringEventId: ev.recurringEventId ?? existing[0].recurringEventId
 				})
-				.where(and(eq(appointments.googleCalendarId, calendarId), eq(appointments.googleEventId, ev.eventId ?? '')));
+				.where(
+					and(
+						eq(appointments.googleCalendarId, calendarId),
+						eq(appointments.googleEventId, ev.eventId ?? '')
+					)
+				);
 		} else {
 			await db.insert(appointments).values({
 				id: randomUUID(),
@@ -193,15 +207,20 @@ endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
 				summary: ev.summary ?? 'Sin título',
 				allDay: ev.allDay ?? false,
 				localDate: ev.localDate ?? null,
-startsAt: ev.startsAt ? new Date(ev.startsAt) : null,
-endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
+				startsAt: ev.startsAt ? new Date(ev.startsAt) : null,
+				endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
 				attendanceStatus: 'scheduled',
 				calendarStatus: ev.status === 'cancelled' ? 'cancelled' : 'confirmed'
 			});
 		}
 	}
 
-	private async recordSyncState(calendarId: string, syncToken?: string, lastSyncedAt?: Date, lastError?: string | null) {
+	private async recordSyncState(
+		calendarId: string,
+		syncToken?: string,
+		lastSyncedAt?: Date,
+		lastError?: string | null
+	) {
 		const now = lastSyncedAt ?? new Date();
 		const existing = await db
 			.select()
@@ -239,7 +258,11 @@ endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
 
 		let rawEvents: GoogleEvent[];
 		try {
-			rawEvents = await (this.provider as { fetchEvents: (a: string, b: string, c: string) => Promise<GoogleEvent[]> }).fetchEvents(calendarId, thirtyDaysAgo.toISOString(), ninetyDaysFromNow.toISOString());
+			rawEvents = await (
+				this.provider as {
+					fetchEvents: (a: string, b: string, c: string) => Promise<GoogleEvent[]>;
+				}
+			).fetchEvents(calendarId, thirtyDaysAgo.toISOString(), ninetyDaysFromNow.toISOString());
 		} catch (err) {
 			await this.recordSyncState(calendarId, undefined, now, (err as Error).message);
 			throw new Error(`Sync fallida: ${(err as Error).message}`, { cause: err });
@@ -274,7 +297,10 @@ endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
 		for (const existing of allRecords) {
 			const stillAppears = appearingIds.has(existing.googleEventId);
 			if (!stillAppears && existing.calendarStatus !== 'cancelled') {
-				await db.update(appointments).set({ calendarStatus: 'deleted' }).where(eq(appointments.id, existing.id));
+				await db
+					.update(appointments)
+					.set({ calendarStatus: 'deleted' })
+					.where(eq(appointments.id, existing.id));
 			}
 		}
 
@@ -305,7 +331,14 @@ endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
 
 		let result: { items?: GoogleEvent[]; nextSyncToken?: string };
 		try {
-			result = await (this.provider as { fetchEventsWithToken: (a: string, b: string) => Promise<{ items?: GoogleEvent[]; nextSyncToken?: string }> }).fetchEventsWithToken(calendarId, syncToken);
+			result = await (
+				this.provider as {
+					fetchEventsWithToken: (
+						a: string,
+						b: string
+					) => Promise<{ items?: GoogleEvent[]; nextSyncToken?: string }>;
+				}
+			).fetchEventsWithToken(calendarId, syncToken);
 		} catch (err: unknown) {
 			if ((err as { status?: number })?.status === 410) {
 				await this.recordSyncState(calendarId, undefined, now, 'sync token expired');
@@ -345,7 +378,10 @@ endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
 		for (const existing of allRecords) {
 			const stillAppears = appearingIds.has(existing.googleEventId);
 			if (!stillAppears && existing.calendarStatus !== 'cancelled') {
-				await db.update(appointments).set({ calendarStatus: 'deleted' }).where(eq(appointments.id, existing.id));
+				await db
+					.update(appointments)
+					.set({ calendarStatus: 'deleted' })
+					.where(eq(appointments.id, existing.id));
 			}
 		}
 

@@ -98,7 +98,8 @@
 								</div>
 								<p class="text-muted-foreground mt-1 text-xs">
 									<span class="font-mono">{patient.phone}</span>
-									· {copy.list.registeredLabel} {formatDate(patient.registeredAt)}
+									· {copy.list.registeredLabel}
+									{formatDate(patient.registeredAt)}
 								</p>
 							</div>
 						</li>
