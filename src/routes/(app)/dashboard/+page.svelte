@@ -130,7 +130,7 @@ function reminderAction(a: Appointment): ReminderAction {
 									{/if}
 								</p>
 							</div>
-							<div class="flex items-center gap-2">
+							<div class="flex flex-wrap items-center gap-2">
 								{#if appointment.patientName}
 									<Badge variant="outline" class={attendanceClasses[appointment.attendanceStatus]}>
 										{attendanceLabels[appointment.attendanceStatus]}

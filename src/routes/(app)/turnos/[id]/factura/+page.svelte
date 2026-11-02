@@ -54,7 +54,7 @@
 	{/if}
 
 	<!-- Add service -->
-	<form method="POST" action="?/add_service" use:enhance class="flex items-end gap-2">
+	<form method="POST" action="?/add_service" use:enhance class="flex flex-wrap items-end gap-2">
 		<input type="hidden" name="appointmentId" value={data.appointment.id} />
 		<div class="flex flex-col gap-1">
 			<Label for="servicePriceId">Práctica</Label>

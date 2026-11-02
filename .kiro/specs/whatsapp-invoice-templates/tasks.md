@@ -117,3 +117,5 @@ Reference pattern for pages: `src/routes/(app)/turnos/[id]/recordatorio/`.
 }
 ```
 
+
+- The application UI is responsive and adapted for mobile users (hamburger nav, wrapping action buttons, stacked form controls).

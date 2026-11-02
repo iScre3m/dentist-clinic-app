@@ -69,12 +69,7 @@
 					action="?/register"
 					class="space-y-4"
 					onsubmit={() => (submitted = true)}
-					use:enhance={() =>
-						async ({ update }) => {
-							// The page has no server data to refresh. Keeping the result
-							// on screen lets the patient see the confirmation.
-							await update({ reset: false, refreshAll: false, navigate: false });
-						}}
+					use:enhance
 				>
 					<div class="space-y-2">
 						<Label for="firstName">Nombre</Label>
