@@ -45,12 +45,15 @@ const { values } = parseArgs({
 });
 
 const email = values.email ?? process.env.SEED_STAFF_EMAIL;
+const password = values.password ?? process.env.SEED_STAFF_PASSWORD;
 if (!email) {
 	console.error('Falta --email (o SEED_STAFF_EMAIL en .env).');
 	process.exit(1);
 }
-if (!values.name && !values['new-email'] && !values.password) {
-	console.error('Indique al menos --name, --new-email o --password.');
+if (!values.name && !values['new-email'] && !password) {
+	console.error(
+		'Indique al menos --name, --new-email o [--password | SEED_STAFF_PASSWORD en .env].'
+	);
 	process.exit(1);
 }
 
@@ -77,9 +80,9 @@ if (values.remote) {
 			})
 			.where(eq(user.id, u.id));
 	}
-	if (values.password) {
+	if (password) {
 		const { hashPassword } = await import('better-auth/crypto');
-		const hashed = await hashPassword(values.password);
+		const hashed = await hashPassword(password);
 		await db
 			.update(account)
 			.set({ password: hashed, updatedAt: new Date() })
@@ -108,13 +111,13 @@ if (Object.keys(updates).length > 1) {
 	await db.update(user).set(updates).where(eq(user.id, u.id));
 }
 
-if (values.password) {
-	const { hashPassword } = await import('better-auth/crypto');
-	const hashed = await hashPassword(values.password);
-	await db
-		.update(account)
-		.set({ password: hashed, updatedAt: new Date() })
-		.where(eq(account.userId, u.id));
-}
+	if (password) {
+		const { hashPassword } = await import('better-auth/crypto');
+		const hashed = await hashPassword(password);
+		await db
+			.update(account)
+			.set({ password: hashed, updatedAt: new Date() })
+			.where(eq(account.userId, u.id));
+	}
 
-console.log(`Actualizado: ${values['new-email'] ?? email}`);
+	console.log(`Actualizado: ${values['new-email'] ?? email}`);
