@@ -11,7 +11,8 @@
         "binding": "ASSETS"
     },
     "vars": {
-        "BETTER_AUTH_URL": "https://dentist-admin.iscreem.workers.dev"
+        "BETTER_AUTH_URL": "https://dentist-admin.iscreem.workers.dev",
+        "APP_URL": "https://dentist-admin.iscreem.workers.dev"
     },
     "d1_databases": [
         {

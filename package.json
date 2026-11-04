@@ -16,6 +16,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:seed": "tsx scripts/seed.ts",
+		"db:seed:remote": "tsx scripts/seed-remote.ts",
 		"db:prune": "tsx scripts/prune.ts",
 		"staff:update": "tsx scripts/staff-update.ts",
 		"test:unit": "vitest run",

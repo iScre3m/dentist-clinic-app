@@ -1,9 +1,0 @@
-import type { RequestHandler } from './$types';
-
-export const GET: RequestHandler = async (event) => {
-    return event.locals.auth.handler(event.request);
-};
-
-export const POST: RequestHandler = async (event) => {
-    return event.locals.auth.handler(event.request);
-};
