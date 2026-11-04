@@ -8,6 +8,8 @@ export default [
 	{
 		ignores: [
 			'.svelte-kit/',
+			'.wrangler/',
+			'worker-configuration.d.ts',
 			'build/',
 			'node_modules/',
 			'drizzle/',

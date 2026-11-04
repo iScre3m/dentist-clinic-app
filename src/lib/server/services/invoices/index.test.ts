@@ -27,7 +27,12 @@ migrationDb.pragma('journal_mode = WAL');
 migrate(drizzle(migrationDb), { migrationsFolder: resolve('drizzle') });
 migrationDb.close();
 
-const { db } = await import('#lib/server/db/index.ts');
+const { installDb } = await import('#lib/server/db/index.ts');
+const { db } = await import('#lib/server/db/local.ts');
+
+// Services import the shared `db` proxy; install the file-based handle here
+// so the service calls inside tests hit the migrated temp database.
+installDb(db);
 const {
 	appointmentServices,
 	appointments,

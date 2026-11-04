@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { normalizeMobile } from '#lib/server/services/patients/phone.ts';
 
-type DecodedEvent = {
+export type DecodedEvent = {
 	eventId?: string;
 	recurringEventId: string | null;
 	summary: string;
@@ -87,6 +87,108 @@ export function simulateDelay(ms = 50): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export async function matchPatientByPhone(description?: string): Promise<string | null> {
+	if (!description) return null;
+	const match = description.match(/Paciente:\s*([+\d\s\-()]+)/i);
+	if (!match) return null;
+	const rawNumber = match[1].trim();
+	const result = await normalizeMobile(rawNumber);
+	if (!result.ok) return null;
+	const patientRows = await db
+		.select({ id: patients.id })
+		.from(patients)
+		.where(eq(patients.phone, result.e164))
+		.limit(1);
+	if (patientRows.length === 0) return null;
+	return patientRows[0].id;
+}
+
+export async function upsertAppointment(
+	calendarId: string,
+	ev: DecodedEvent,
+	patientId?: string | null
+) {
+	const existing = await db
+		.select()
+		.from(appointments)
+		.where(
+			and(
+				eq(appointments.googleCalendarId, calendarId),
+				eq(appointments.googleEventId, ev.eventId ?? '')
+			)
+		)
+		.limit(1);
+	if (existing.length > 0) {
+		await db
+			.update(appointments)
+			.set({
+				patientId: patientId !== undefined ? patientId : existing[0].patientId,
+				summary: ev.summary ?? 'Sin título',
+				allDay: ev.allDay ?? false,
+				localDate: ev.localDate ?? null,
+				startsAt: ev.startsAt ? new Date(ev.startsAt) : null,
+				endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
+				calendarStatus: ev.status === 'cancelled' ? 'cancelled' : 'confirmed',
+				recurringEventId: ev.recurringEventId ?? existing[0].recurringEventId
+			})
+			.where(
+				and(
+					eq(appointments.googleCalendarId, calendarId),
+					eq(appointments.googleEventId, ev.eventId ?? '')
+				)
+			);
+	} else {
+		await db.insert(appointments).values({
+			id: randomUUID(),
+			patientId: patientId ?? null,
+			googleCalendarId: calendarId,
+			googleEventId: ev.eventId ?? randomUUID(),
+			recurringEventId: ev.recurringEventId ?? null,
+			summary: ev.summary ?? 'Sin título',
+			allDay: ev.allDay ?? false,
+			localDate: ev.localDate ?? null,
+			startsAt: ev.startsAt ? new Date(ev.startsAt) : null,
+			endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
+			attendanceStatus: 'scheduled',
+			calendarStatus: ev.status === 'cancelled' ? 'cancelled' : 'confirmed'
+		});
+	}
+}
+
+export async function recordSyncState(
+	calendarId: string,
+	syncToken?: string,
+	lastSyncedAt?: Date,
+	lastError?: string | null
+) {
+	const now = lastSyncedAt ?? new Date();
+	const existing = await db
+		.select()
+		.from(calendarSyncState)
+		.where(eq(calendarSyncState.googleCalendarId, calendarId))
+		.limit(1);
+	if (existing.length > 0) {
+		await db
+			.update(calendarSyncState)
+			.set({
+				syncToken: syncToken !== undefined ? syncToken : existing[0].syncToken,
+				lastSyncedAt: now,
+				lastFullSyncAt: syncToken === undefined ? now : existing[0].lastFullSyncAt,
+				lastError: lastError !== undefined ? lastError : existing[0].lastError
+			})
+			.where(eq(calendarSyncState.googleCalendarId, calendarId));
+	} else {
+		await db.insert(calendarSyncState).values({
+			id: randomUUID(),
+			googleCalendarId: calendarId,
+			syncToken: syncToken ?? null,
+			lastSyncedAt: now,
+			lastFullSyncAt: now,
+			lastError: lastError ?? null
+		});
+	}
+}
+
 export class GoogleCalendarService {
 	private provider: unknown;
 
@@ -121,22 +223,6 @@ export class GoogleCalendarService {
 		}
 	}
 
-	private async matchPatientByPhone(description?: string): Promise<string | null> {
-		if (!description) return null;
-		const match = description.match(/Paciente:\s*([+\d\s\-()]+)/i);
-		if (!match) return null;
-		const rawNumber = match[1].trim();
-		const result = await normalizeMobile(rawNumber);
-		if (!result.ok) return null;
-		const patientRows = await db
-			.select({ id: patients.id })
-			.from(patients)
-			.where(eq(patients.phone, result.e164))
-			.limit(1);
-		if (patientRows.length === 0) return null;
-		return patientRows[0].id;
-	}
-
 	private decodeEvent(raw: GoogleEvent): DecodedEvent {
 		const event = raw as GoogleEvent;
 		const startDate = event.start?.date ?? event.start?.dateTime;
@@ -167,88 +253,6 @@ export class GoogleCalendarService {
 		};
 	}
 
-	private async upsertAppointment(calendarId: string, ev: DecodedEvent, patientId?: string | null) {
-		const existing = await db
-			.select()
-			.from(appointments)
-			.where(
-				and(
-					eq(appointments.googleCalendarId, calendarId),
-					eq(appointments.googleEventId, ev.eventId ?? '')
-				)
-			)
-			.limit(1);
-		if (existing.length > 0) {
-			await db
-				.update(appointments)
-				.set({
-					patientId: patientId !== undefined ? patientId : existing[0].patientId,
-					summary: ev.summary ?? 'Sin título',
-					allDay: ev.allDay ?? false,
-					localDate: ev.localDate ?? null,
-					startsAt: ev.startsAt ? new Date(ev.startsAt) : null,
-					endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
-					calendarStatus: ev.status === 'cancelled' ? 'cancelled' : 'confirmed',
-					recurringEventId: ev.recurringEventId ?? existing[0].recurringEventId
-				})
-				.where(
-					and(
-						eq(appointments.googleCalendarId, calendarId),
-						eq(appointments.googleEventId, ev.eventId ?? '')
-					)
-				);
-		} else {
-			await db.insert(appointments).values({
-				id: randomUUID(),
-				patientId: patientId ?? null,
-				googleCalendarId: calendarId,
-				googleEventId: ev.eventId ?? randomUUID(),
-				recurringEventId: ev.recurringEventId ?? null,
-				summary: ev.summary ?? 'Sin título',
-				allDay: ev.allDay ?? false,
-				localDate: ev.localDate ?? null,
-				startsAt: ev.startsAt ? new Date(ev.startsAt) : null,
-				endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
-				attendanceStatus: 'scheduled',
-				calendarStatus: ev.status === 'cancelled' ? 'cancelled' : 'confirmed'
-			});
-		}
-	}
-
-	private async recordSyncState(
-		calendarId: string,
-		syncToken?: string,
-		lastSyncedAt?: Date,
-		lastError?: string | null
-	) {
-		const now = lastSyncedAt ?? new Date();
-		const existing = await db
-			.select()
-			.from(calendarSyncState)
-			.where(eq(calendarSyncState.googleCalendarId, calendarId))
-			.limit(1);
-		if (existing.length > 0) {
-			await db
-				.update(calendarSyncState)
-				.set({
-					syncToken: syncToken !== undefined ? syncToken : existing[0].syncToken,
-					lastSyncedAt: now,
-					lastFullSyncAt: syncToken === undefined ? now : existing[0].lastFullSyncAt,
-					lastError: lastError !== undefined ? lastError : existing[0].lastError
-				})
-				.where(eq(calendarSyncState.googleCalendarId, calendarId));
-		} else {
-			await db.insert(calendarSyncState).values({
-				id: randomUUID(),
-				googleCalendarId: calendarId,
-				syncToken: syncToken ?? null,
-				lastSyncedAt: now,
-				lastFullSyncAt: now,
-				lastError: lastError ?? null
-			});
-		}
-	}
-
 	async fullSync(calendarId: string): Promise<CalendarSyncResult> {
 		const now = new Date();
 		const thirtyDaysAgo = new Date();
@@ -264,7 +268,7 @@ export class GoogleCalendarService {
 				}
 			).fetchEvents(calendarId, thirtyDaysAgo.toISOString(), ninetyDaysFromNow.toISOString());
 		} catch (err) {
-			await this.recordSyncState(calendarId, undefined, now, (err as Error).message);
+			await recordSyncState(calendarId, undefined, now, (err as Error).message);
 			throw new Error(`Sync fallida: ${(err as Error).message}`, { cause: err });
 		}
 
@@ -283,14 +287,14 @@ export class GoogleCalendarService {
 
 		for (const ev of decoded) {
 			if (ev.eventId) appearingIds.add(ev.eventId);
-			const patientId = await this.matchPatientByPhone(ev.description);
+			const patientId = await matchPatientByPhone(ev.description);
 			if (patientId) eventsMatched++;
 			else eventsUnmatched++;
 
 			if (existingEventIds.has(ev.eventId ?? '')) {
-				await this.upsertAppointment(calendarId, ev, patientId);
+				await upsertAppointment(calendarId, ev, patientId);
 			} else {
-				await this.upsertAppointment(calendarId, ev, patientId);
+				await upsertAppointment(calendarId, ev, patientId);
 			}
 		}
 
@@ -304,7 +308,7 @@ export class GoogleCalendarService {
 			}
 		}
 
-		await this.recordSyncState(calendarId, undefined, now, null);
+		await recordSyncState(calendarId, undefined, now, null);
 		return {
 			eventsCreated: 0,
 			eventsUpdated: 0,
@@ -341,10 +345,10 @@ export class GoogleCalendarService {
 			).fetchEventsWithToken(calendarId, syncToken);
 		} catch (err: unknown) {
 			if ((err as { status?: number })?.status === 410) {
-				await this.recordSyncState(calendarId, undefined, now, 'sync token expired');
+				await recordSyncState(calendarId, undefined, now, 'sync token expired');
 				return this.fullSync(calendarId);
 			}
-			await this.recordSyncState(calendarId, syncToken, now, (err as Error).message);
+			await recordSyncState(calendarId, syncToken, now, (err as Error).message);
 			throw new Error(`Sync fallida: ${(err as Error).message}`, { cause: err });
 		}
 
@@ -364,14 +368,14 @@ export class GoogleCalendarService {
 
 		for (const ev of decoded) {
 			if (ev.eventId) appearingIds.add(ev.eventId);
-			const patientId = await this.matchPatientByPhone(ev.description);
+			const patientId = await matchPatientByPhone(ev.description);
 			if (patientId) eventsMatched++;
 			else eventsUnmatched++;
 
 			if (existingEventIds.has(ev.eventId ?? '')) {
-				await this.upsertAppointment(calendarId, ev, patientId);
+				await upsertAppointment(calendarId, ev, patientId);
 			} else {
-				await this.upsertAppointment(calendarId, ev, patientId);
+				await upsertAppointment(calendarId, ev, patientId);
 			}
 		}
 
@@ -386,7 +390,7 @@ export class GoogleCalendarService {
 		}
 
 		const nextToken = result.nextSyncToken ?? syncToken;
-		await this.recordSyncState(calendarId, nextToken, now, null);
+		await recordSyncState(calendarId, nextToken, now, null);
 		return {
 			eventsCreated: 0,
 			eventsUpdated: 0,

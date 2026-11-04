@@ -3,5 +3,6 @@ AGENTS.md
 drizzle/
 templates/
 .svelte-kit/
+.wrangler/
 build/
 pnpm-lock.yaml

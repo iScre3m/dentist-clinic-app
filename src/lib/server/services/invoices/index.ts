@@ -420,34 +420,32 @@ export async function markSent(invoiceId: string, staffId: string): Promise<Conf
 
 	const now = new Date();
 
-	return db.transaction((tx) => {
+	// better-sqlite3 transactions cannot wrap async callbacks and D1 needs
+	// awaits inside them, so the guard runs between the two writes instead
+	// (single staff user, MVP scope). The reminder record is only inserted
+	// when the invoice row was actually found and updated.
+	const update = await db
+		.update(invoiceHistory)
 		// A resent invoice keeps its 'resent' status; the send timestamp is set here.
-		const update = tx
-			.update(invoiceHistory)
-			.set({ status: invoice.status === 'resent' ? 'resent' : 'sent', sentAt: now })
-			.where(eq(invoiceHistory.id, invoiceId))
-			.returning({ id: invoiceHistory.id })
-			.all();
+		.set({ status: invoice.status === 'resent' ? 'resent' : 'sent', sentAt: now })
+		.where(eq(invoiceHistory.id, invoiceId))
+		.returning({ id: invoiceHistory.id });
 
-		if (update.length === 0) return { ok: false, reason: 'not-found' as const };
+	if (update.length === 0) return { ok: false, reason: 'not-found' };
 
-		tx.insert(reminderRecords)
-			.values({
-				id: randomUUID(),
-				appointmentId: invoice.appointmentId,
-				purpose: 'invoice',
-				templateKey: 'invoice',
-				status: 'sent',
-				recordedBy: staffId,
-				recordedAt: now,
-				createdAt: now,
-				updatedAt: now
-			})
-			.returning({ id: reminderRecords.id })
-			.all();
-
-		return { ok: true } as const;
+	await db.insert(reminderRecords).values({
+		id: randomUUID(),
+		appointmentId: invoice.appointmentId,
+		purpose: 'invoice',
+		templateKey: 'invoice',
+		status: 'sent',
+		recordedBy: staffId,
+		recordedAt: now,
+		createdAt: now,
+		updatedAt: now
 	});
+
+	return { ok: true };
 }
 
 /** Record that the assistant chose not to send. The invoice stays 'generated'. */

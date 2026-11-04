@@ -6,7 +6,7 @@ try {
 	// No .env file; defaults apply.
 }
 
-const { db } = await import('../src/lib/server/db');
+const { db } = await import('../src/lib/server/db/local');
 const { appointmentServices, appointments, invoiceHistory, reminderRecords } =
 	await import('../src/lib/server/db/schema');
 

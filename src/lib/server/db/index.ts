@@ -1,12 +1,39 @@
-import '../load-env.ts';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
-const databasePath = process.env.DATABASE_PATH ?? './local.db';
+/**
+ * D1-backed database access for the Worker.
+ *
+ * `drizzle-orm/d1` instances are stateless wrappers around the binding, so one
+ * isolate-wide handle is safe even with concurrent requests. `hooks.server.ts`
+ * installs the handle before any route runs; services keep importing the `db`
+ * proxy, which forward every call to the installed handle.
+ *
+ * Never import `better-sqlite3` from here: its native binding cannot load
+ * inside a Cloudflare Worker (see `db/local.ts`, Node-only).
+ */
 
-const sqlite = new Database(databasePath);
-sqlite.pragma('journal_mode = WAL');
-sqlite.pragma('foreign_keys = ON');
+export type AppDatabase = DrizzleD1Database<typeof schema>;
 
-export const db = drizzle(sqlite, { schema });
+let database: object | null = null;
+
+/**
+ * Install the isolate-wide database handle. Called from `hooks.server.ts` per
+ * request (cheap and idempotent). Tests can install a better-sqlite3 handle
+ * from `db/local.ts`, which speaks the same Drizzle query API.
+ */
+export function installDb(handle: object): void {
+	database = handle;
+}
+
+export const db = new Proxy({} as AppDatabase, {
+	get(_target, property) {
+		if (database === null) {
+			throw new Error(
+				'La base de datos D1 no está inicializada. installDb() debe ejecutarse en hooks.server.ts antes de atender una request.'
+			);
+		}
+		const value = Reflect.get(database, property);
+		return typeof value === 'function' ? value.bind(database) : value;
+	}
+});

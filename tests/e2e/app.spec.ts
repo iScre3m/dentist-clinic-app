@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { waitForHydration } from './support/hydration.ts';
 
 // Public specs must never inherit a session, even if a future config starts
 // applying a storage state globally.
@@ -13,7 +14,7 @@ test('login with seeded staff account', async ({ page }) => {
 	await page.goto('/login');
 	// Wait for hydration: a click on a non-interactive form would submit it
 	// natively as a GET instead of running the client-side sign-in.
-	await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
+	await waitForHydration(page);
 	await page.getByLabel('Correo').fill('staff@example.com');
 	await page.getByLabel('Contraseña').fill('change-me-too');
 	await page.getByRole('button', { name: 'Ingresar' }).click();
@@ -41,6 +42,7 @@ test('public registration page renders consent text', async ({ page }) => {
 
 test('registration form rejects invalid name', async ({ page }) => {
 	await page.goto('/');
+	await waitForHydration(page);
 	await page.getByLabel('Nombre').fill('123');
 	await page.getByLabel('Apellido').fill('Paciente');
 	await page.getByLabel('Número de WhatsApp').fill('5512345678');
@@ -50,6 +52,7 @@ test('registration form rejects invalid name', async ({ page }) => {
 
 test('registration form explains why a landline is rejected', async ({ page }) => {
 	await page.goto('/');
+	await waitForHydration(page);
 	await page.getByLabel('Nombre').fill('Ana');
 	await page.getByLabel('Apellido').fill('Perez');
 	await page.getByLabel('Número de WhatsApp').fill('11 5555 0001');
@@ -62,6 +65,7 @@ test('registration form explains why a landline is rejected', async ({ page }) =
 
 test('registration form accepts a locally dialed mobile number', async ({ page }) => {
 	await page.goto('/');
+	await waitForHydration(page);
 	await page.getByLabel('Nombre').fill('Ana');
 	await page.getByLabel('Apellido').fill('Perez');
 	await page.getByLabel('Número de WhatsApp').fill('11 15 7777 0001');

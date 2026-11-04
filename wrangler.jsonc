@@ -1,0 +1,25 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "dentist-admin",
+    "compatibility_date": "2026-11-02",
+    "compatibility_flags": [
+        "nodejs_compat"
+    ],
+    "main": ".svelte-kit/cloudflare/_worker.js",
+    "assets": {
+        "directory": ".svelte-kit/cloudflare",
+        "binding": "ASSETS"
+    },
+    "vars": {
+        "BETTER_AUTH_URL": "https://dentist-admin.iscreem.workers.dev"
+    },
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "dentist-admin-db",
+            "database_id": "0cf23b04-8982-4127-a7c0-0117078608cf",
+            "migrations_dir": "drizzle",
+            "migrations_pattern": "drizzle/**/*.sql"
+        }
+    ]
+}

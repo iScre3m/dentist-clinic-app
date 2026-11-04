@@ -107,23 +107,30 @@ docker compose -f docker-compose.dev.yml down
 
 ### Production build
 
+Production runs on Cloudflare Workers with D1. See
+[Deploy to Cloudflare](#deploy-to-cloudflare).
+
+## Deploy to Cloudflare
+
+The production target is Cloudflare Workers with D1 (`wrangler.jsonc`):
+
 ```sh
-docker compose up -d --build
+# 1. Apply D1 migrations to the remote database.
+pnpm exec wrangler d1 migrations apply DB --remote
 
-# First staff account. Seeding refuses NODE_ENV=production, so run it as development.
-docker compose run --rm -e NODE_ENV=development app node_modules/.bin/tsx scripts/seed.ts
+# 2. Set the worker's secrets and vars once.
+pnpm exec wrangler secret put BETTER_AUTH_SECRET
+pnpm exec wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON
+# BETTER_AUTH_URL, APP_URL, GOOGLE_CALENDAR_ID, FAKE_CALENDAR and the clinic
+# vars come from wrangler.jsonc / `wrangler secret put` as appropriate.
 
-docker compose logs -f
-docker compose down
+# 3. Deploy.
+pnpm exec wrangler deploy
 ```
 
-The app is served at http://localhost:3000. Before exposing it, set
-`BETTER_AUTH_URL` and `APP_URL` to the public HTTPS URL, set `FAKE_CALENDAR=0`,
-and use a strong `BETTER_AUTH_SECRET`.
-
-The SQLite database lives in `./data/local.db` on the host and survives
-rebuilds and container restarts. Backups, maintenance commands, and rebuild
-rules are in [DOCKER.md](DOCKER.md).
+Wrangler authorizes remote operations with `CLOUDFLARE_API_TOKEN` (and
+`CLOUDFLARE_ACCOUNT_ID`) from the environment; both are documented in
+`.env.example` and never committed.
 
 ## Environment variables
 
@@ -175,9 +182,12 @@ duplicated. It refuses to run when `NODE_ENV=production`.
 
 ### End-to-end tests
 
-`pnpm test:e2e` runs against its own database (`test.db`), never `local.db`.
-Before the tests start, `tests/e2e/global-setup.ts` migrates that file, empties
-every table, and runs `pnpm db:seed`, so the seeded staff account always exists.
+`pnpm test:e2e` runs against the local D1 database that wrangler persists in
+`.wrangler/state/`, never the development or remote database. Before the tests
+start, `tests/e2e/global-setup.ts` applies migrations to that database, empties
+every table, and seeds it, so the seeded staff account always exists. Because
+the dev server and the tests share that database, do not run `pnpm dev` while
+the suite is running.
 
 The `setup` project (`tests/e2e/auth.setup.ts`) then signs in once through the
 Better Auth API and saves the session cookies to `tests/e2e/.auth/staff.json`.
@@ -207,9 +217,19 @@ Sync runs only when staff trigger it: a **Sync now** button or opening the app. 
 
 ## Database and backups
 
-The database is a single SQLite file with WAL enabled.
+The app uses Cloudflare D1 in production. Local development, seeding and
+maintenance scripts use a single SQLite file (`DATABASE_PATH`, `local.db` by
+default) with WAL enabled.
 
-Backup (planned, documented in `Operations` below):
+**Production (D1):** back up with an export:
+
+```sh
+pnpm exec wrangler d1 export DB --remote --output "backup-$(date +%Y-%m-%d).sql"
+```
+
+Keep copies off the machine and test a restore at least once.
+
+**Local (SQLite file):**
 
 ```sh
 sqlite3 "$DATABASE_PATH" ".backup 'backup-$(date +%Y-%m-%d).db'"
@@ -220,7 +240,8 @@ Restore: stop the app, replace the database file, remove any leftover
 
 Retention: `pnpm db:prune` removes reminder records and past appointments
 older than 90 days. Past appointments with no recorded outcome are kept
-until resolved.
+until resolved. It runs against the local file only; the remote D1 database
+is not pruned automatically yet.
 
 ## Operations
 

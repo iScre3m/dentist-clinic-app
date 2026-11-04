@@ -1,5 +1,9 @@
-import { auth } from '#lib/server/auth.ts';
-import { toSvelteKitHandler } from 'better-auth/svelte-kit';
+import type { RequestHandler } from './$types';
 
-export const GET = toSvelteKitHandler(auth);
-export const POST = toSvelteKitHandler(auth);
+export const GET: RequestHandler = async (event) => {
+    return event.locals.auth.handler(event.request);
+};
+
+export const POST: RequestHandler = async (event) => {
+    return event.locals.auth.handler(event.request);
+};

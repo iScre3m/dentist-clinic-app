@@ -1,15 +1,12 @@
 /**
  * Shared Playwright test configuration.
  *
- * The test database, the staff credentials and the saved browser session all
- * live here so `playwright.config.ts`, the global setup and the specs cannot
- * drift apart.
+ * The staff credentials and the saved browser session all live here so
+ * `playwright.config.ts`, the global setup and the specs cannot drift apart.
  */
 
-/** Database used by the Playwright web server. Never the development database. */
-export const TEST_DATABASE_PATH = './test.db';
-
-/** Seeded staff account (see `scripts/seed.ts` and `.env.example`). */
+/** Seeded staff account (see `src/lib/server/db/seed.ts` and `.env.example`). */
+export const STAFF_NAME = process.env.SEED_STAFF_NAME ?? 'Dra. Laura';
 export const STAFF_EMAIL = process.env.SEED_STAFF_EMAIL ?? 'staff@example.com';
 export const STAFF_PASSWORD = process.env.SEED_STAFF_PASSWORD ?? 'change-me-too';
 

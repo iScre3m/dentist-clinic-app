@@ -21,14 +21,19 @@ export async function getPatient(id: string) {
 	return rows[0];
 }
 
-/** better-sqlite3 surfaces constraint violations with a SQLITE_CONSTRAINT* code. */
+/** better-sqlite3 surfaces constraint violations through the error's `code`;
+ * D1's SQLite loses the code and only keeps it in the message. */
 function isConstraintError(value: unknown): boolean {
-	return (
-		typeof value === 'object' &&
-		value !== null &&
+	if (typeof value !== 'object' || value === null) return false;
+	if (
 		'code' in value &&
 		String((value as { code: unknown }).code).startsWith('SQLITE_CONSTRAINT')
-	);
+	) {
+		return true;
+	}
+	return 'message' in value && String((value as { message: unknown }).message)
+		.toLowerCase()
+		.includes('constraint failed');
 }
 
 /**

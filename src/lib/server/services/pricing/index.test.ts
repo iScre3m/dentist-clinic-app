@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 /**
  * DB-backed unit tests for the pricing service.
  *
- * `db/index.ts` resolves the database path once at import time, so a temp file
+ * `db/local.ts` resolves the database path once at import time, so a temp file
  * is pinned to `DATABASE_PATH` before importing any server module. Migrations
  * are applied first with a separate connection (same pattern as
  * `tests/e2e/global-setup.ts`), then the singleton picks up the migrated file.
@@ -25,7 +25,12 @@ migrationDb.pragma('journal_mode = WAL');
 migrate(drizzle(migrationDb), { migrationsFolder: resolve('drizzle') });
 migrationDb.close();
 
-const { db } = await import('#lib/server/db/index.ts');
+const { installDb } = await import('#lib/server/db/index.ts');
+const { db } = await import('#lib/server/db/local.ts');
+
+// Services import the shared `db` proxy; install the file-based handle here
+// so the service calls inside tests hit the migrated temp database.
+installDb(db);
 const { user, servicePrices } = await import('#lib/server/db/schema.ts');
 const {
 	createServicePrice,

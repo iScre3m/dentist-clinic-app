@@ -24,7 +24,7 @@ if (!values.name && !values['new-email'] && !values.password) {
 	process.exit(1);
 }
 
-const { db } = await import('../src/lib/server/db');
+const { db } = await import('../src/lib/server/db/local');
 const { user, account } = await import('../src/lib/server/db/schema');
 const { eq } = await import('drizzle-orm');
 

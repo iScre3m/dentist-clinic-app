@@ -53,6 +53,9 @@
 	type ReminderAction = 'send' | 'none';
 	type Appointment = NonNullable<DashboardData['upcoming']>[number];
 
+	let connectMessage = $state('');
+	let connectError = $state('');
+
 function reminderAction(a: Appointment): ReminderAction {
 	if (!a.patientConsent || !a.patientPhone || a.patientOptedOutAt) return 'none';
 	if (a.patientConsent === 'granted') return 'send';
@@ -74,36 +77,57 @@ function reminderAction(a: Appointment): ReminderAction {
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Sincronización con Google Calendar</Card.Title>
+			<Card.Title>Calendario de la práctica</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<div class="flex items-center justify-between">
-				<div class="text-sm text-muted-foreground">
-					{#if (data as DashboardData).syncState?.lastSyncedAt}
-						Última sincronización: {formatDateTime(
-							new Date((data as DashboardData).syncState!.lastSyncedAt!)
-						)}
-					{:else if (data as DashboardData).syncState?.lastError}
-						Sin conectar
-					{:else}
-						Sin sincronización registrada
+				<div>
+					<div class="text-sm text-muted-foreground">
+						{#if (data as DashboardData).syncState?.lastSyncedAt}
+							Última lectura: {formatDateTime(
+								new Date((data as DashboardData).syncState!.lastSyncedAt!)
+							)}
+						{:else if (data as DashboardData).syncState?.lastError}
+							Sin conectar
+						{:else}
+							Sin sincronización registrada
+						{/if}
+						{#if (data as DashboardData).syncState?.lastError}
+							<br />
+							<span class="text-destructive"
+								>Error: {(data as DashboardData).syncState!.lastError}</span
+							>
+						{/if}
+					</div>
+					{#if connectMessage}
+						<p class="mt-2 text-sm">{connectMessage}</p>
 					{/if}
-					{#if (data as DashboardData).syncState?.lastError}
-						<br />
-						<span class="text-destructive"
-							>Error: {(data as DashboardData).syncState!.lastError}</span
-						>
+					{#if connectError}
+						<p class="text-destructive mt-2 text-sm">{connectError}</p>
 					{/if}
 				</div>
 				<div class="flex gap-2">
-					<form method="POST" action="?/connect" use:enhance>
+					<form
+						method="POST"
+						action="?/connect"
+						use:enhance={() => {
+							return async ({ result, update }) => {
+								const payload = (result as { type: string; data?: { success?: boolean; error?: string; result?: { eventsRead?: number } } }).data;
+								if (payload?.success) {
+									connectError = '';
+									connectMessage = `Se leyeron ${payload.result?.eventsRead ?? 0} event${
+										(payload.result?.eventsRead ?? 0) === 1 ? 'o' : 'os'
+									} de hoy.`;
+								} else {
+									connectMessage = '';
+									connectError =
+										payload?.error ?? 'No se pudo leer el calendario. Intentá de nuevo.';
+								}
+								await update();
+							};
+						}}
+					>
 						<Button type="submit" size="sm">Conectar</Button>
-					</form>
-					<form method="POST" action="?/incrementalSync" use:enhance>
-						<Button type="submit" variant="outline" size="sm">Sincronizar</Button>
-					</form>
-					<form method="POST" action="?/sync" use:enhance>
-						<Button type="submit" variant="outline" size="sm">Sincronizar ahora</Button>
 					</form>
 				</div>
 			</div>
