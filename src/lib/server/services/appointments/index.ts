@@ -1,5 +1,5 @@
 import { db } from '#lib/server/db/index.ts';
-import { appointments, reminderRecords, user } from '#lib/server/db/schema.ts';
+import { appointments, reminderRecords } from '#lib/server/db/schema.ts';
 import { and, asc, count, desc, eq, gte, lt, type SQL } from 'drizzle-orm';
 
 export type AttendanceStatus = 'scheduled' | 'confirmed' | 'attended' | 'no_show';
@@ -106,10 +106,10 @@ export async function lastReminder(appointmentId: string) {
 			templateKey: reminderRecords.templateKey,
 			recordedAt: reminderRecords.recordedAt,
 			resentReason: reminderRecords.resentReason,
-			recordedByName: user.name
+			recordedBy: reminderRecords.recordedBy
 		})
 		.from(reminderRecords)
-		.leftJoin(user, eq(reminderRecords.recordedBy, user.id))
+
 		.where(eq(reminderRecords.appointmentId, appointmentId))
 		.orderBy(desc(reminderRecords.recordedAt))
 		.limit(1);
@@ -126,10 +126,10 @@ export async function listReminders(appointmentId: string, limit = 20) {
 			status: reminderRecords.status,
 			recordedAt: reminderRecords.recordedAt,
 			resentReason: reminderRecords.resentReason,
-			recordedByName: user.name
+			recordedBy: reminderRecords.recordedBy
 		})
 		.from(reminderRecords)
-		.leftJoin(user, eq(reminderRecords.recordedBy, user.id))
+
 		.where(eq(reminderRecords.appointmentId, appointmentId))
 		.orderBy(desc(reminderRecords.recordedAt))
 		.limit(limit);

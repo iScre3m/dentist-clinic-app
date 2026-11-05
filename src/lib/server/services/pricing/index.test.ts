@@ -31,7 +31,7 @@ const { db } = await import('#lib/server/db/local.ts');
 // Services import the shared `db` proxy; install the file-based handle here
 // so the service calls inside tests hit the migrated temp database.
 installDb(db);
-const { user, servicePrices } = await import('#lib/server/db/schema.ts');
+const { servicePrices } = await import('#lib/server/db/schema.ts');
 const {
 	createServicePrice,
 	hasAllPrices,
@@ -54,7 +54,7 @@ let consultaId: string;
 let limpiezaId: string;
 
 beforeAll(async () => {
-	await db.insert(user).values([STAFF_1, STAFF_2]);
+	// No user table in the JWT-based MVP; staff id is passed directly to services.
 });
 
 afterAll(() => {
@@ -130,7 +130,7 @@ describe('updatePrice', () => {
 	it('exposes the updater name through the list', async () => {
 		const rows = await listServicePrices();
 		const consulta = rows.find((row) => row.id === consultaId);
-		expect(consulta?.updatedByName).toBe(STAFF_2.name);
+		expect(consulta?.updatedBy).toBe(STAFF_2.id);
 	});
 
 	it('rejects unknown ids and invalid prices', async () => {

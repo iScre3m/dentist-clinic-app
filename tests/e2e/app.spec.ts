@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { STAFF_EMAIL, STAFF_PASSWORD } from './support/env.ts';
 import { waitForHydration } from './support/hydration.ts';
 
 // Public specs must never inherit a session, even if a future config starts
@@ -15,8 +16,8 @@ test('login with seeded staff account', async ({ page }) => {
 	// Wait for hydration: a click on a non-interactive form would submit it
 	// natively as a GET instead of running the client-side sign-in.
 	await waitForHydration(page);
-	await page.getByLabel('Correo').fill('staff@example.com');
-	await page.getByLabel('Contraseña').fill('change-me-too');
+	await page.getByLabel('Correo o usuario').fill(STAFF_EMAIL);
+	await page.getByLabel('Contraseña').fill(STAFF_PASSWORD);
 	await page.getByRole('button', { name: 'Ingresar' }).click();
 	await page.waitForURL('**/dashboard');
 	await expect(page.getByRole('heading', { name: 'Panel' })).toBeVisible();

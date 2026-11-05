@@ -11,58 +11,9 @@ import {
 const nowMs = sql`(unixepoch() * 1000)`;
 
 /**
- * Better Auth tables. The staff account lives in `user`; there are no roles.
- * Names and fields must match what the drizzle adapter expects.
+ * Staff is authenticated via JWT from environment variables (no user table).
+ * Staff identity is represented as 'staff' in application code.
  */
-export const user = sqliteTable('user', {
-	id: text('id').primaryKey(),
-	name: text('name').notNull(),
-	email: text('email').notNull().unique(),
-	emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
-	image: text('image'),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
-});
-
-export const session = sqliteTable('session', {
-	id: text('id').primaryKey(),
-	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-	token: text('token').notNull().unique(),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
-	ipAddress: text('ip_address'),
-	userAgent: text('user_agent'),
-	userId: text('user_id')
-		.notNull()
-		.references(() => user.id, { onDelete: 'cascade' })
-});
-
-export const account = sqliteTable('account', {
-	id: text('id').primaryKey(),
-	accountId: text('account_id').notNull(),
-	providerId: text('provider_id').notNull(),
-	userId: text('user_id')
-		.notNull()
-		.references(() => user.id, { onDelete: 'cascade' }),
-	accessToken: text('access_token'),
-	refreshToken: text('refresh_token'),
-	idToken: text('id_token'),
-	accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp_ms' }),
-	refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp_ms' }),
-	scope: text('scope'),
-	password: text('password'),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
-});
-
-export const verification = sqliteTable('verification', {
-	id: text('id').primaryKey(),
-	identifier: text('identifier').notNull(),
-	value: text('value').notNull(),
-	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
-	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
-});
 
 /** Patients are identified by phone number. Staff never create them. */
 export const patients = sqliteTable(
@@ -118,7 +69,8 @@ export const appointments = sqliteTable(
 			.notNull()
 			.default('confirmed'),
 		confirmedAt: integer('confirmed_at', { mode: 'timestamp_ms' }),
-		outcomeRecordedBy: text('outcome_recorded_by').references(() => user.id),
+		outcomeRecordedBy: text('outcome_recorded_by'),
+
 		outcomeRecordedAt: integer('outcome_recorded_at', { mode: 'timestamp_ms' }),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
@@ -148,9 +100,8 @@ export const reminderRecords = sqliteTable(
 		status: text('status', { enum: ['prepared', 'sent', 'skipped'] })
 			.notNull()
 			.default('prepared'),
-		recordedBy: text('recorded_by')
-			.notNull()
-			.references(() => user.id),
+			recordedBy: text('recorded_by').notNull(),
+
 		recordedAt: integer('recorded_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
 		resentReason: text('resent_reason'),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
@@ -175,9 +126,10 @@ export const followUps = sqliteTable(
 		status: text('status', { enum: ['open', 'done', 'cancelled'] })
 			.notNull()
 			.default('open'),
-		assignedTo: text('assigned_to').references(() => user.id),
+		assignedTo: text('assigned_to'),
 		lastContactAt: integer('last_contact_at', { mode: 'timestamp_ms' }),
-		completedBy: text('completed_by').references(() => user.id),
+		completedBy: text('completed_by'),
+
 		completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
@@ -206,9 +158,8 @@ export const servicePrices = sqliteTable(
 		name: text('name').notNull(),
 		price: integer('price').notNull(),
 		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-		updatedBy: text('updated_by')
-			.notNull()
-			.references(() => user.id),
+		updatedBy: text('updated_by').notNull(),
+
 		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
 	},
@@ -230,9 +181,8 @@ export const appointmentServices = sqliteTable(
 			.notNull()
 			.references(() => servicePrices.id, { onDelete: 'restrict' }),
 		quantity: integer('quantity').notNull().default(1),
-		addedBy: text('added_by')
-			.notNull()
-			.references(() => user.id),
+		addedBy: text('added_by').notNull(),
+
 		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
 	},
@@ -259,9 +209,8 @@ export const invoiceHistory = sqliteTable(
 		services: text('services', { mode: 'json' }).notNull(),
 		subtotal: integer('subtotal').notNull(),
 		total: integer('total').notNull(),
-		createdBy: text('created_by')
-			.notNull()
-			.references(() => user.id),
+		createdBy: text('created_by').notNull(),
+
 		status: text('status', { enum: ['generated', 'sent', 'resent'] })
 			.notNull()
 			.default('generated'),

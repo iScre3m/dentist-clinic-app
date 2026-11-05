@@ -5,6 +5,5 @@ export const load: LayoutServerLoad = ({ locals }) => {
 	if (!locals.session) {
 		throw redirect(303, '/login');
 	}
-
 	return { user: locals.session.user };
 };

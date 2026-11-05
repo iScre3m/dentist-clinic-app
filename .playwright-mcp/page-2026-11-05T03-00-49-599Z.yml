@@ -1,0 +1,15 @@
+- generic [ref=f4e2]:
+  - main [ref=f4e119]:
+    - generic [ref=f4e120]:
+      - generic [ref=f4e121]:
+        - generic [ref=f4e122]: Consultorio
+        - paragraph [ref=f4e123]: Acceso para el personal del consultorio.
+      - generic [ref=f4e125]:
+        - generic [ref=f4e126]:
+          - generic [ref=f4e127]: Correo o usuario
+          - textbox "Correo o usuario" [ref=f4e128]
+        - generic [ref=f4e129]:
+          - generic [ref=f4e130]: Contraseña
+          - textbox "Contraseña" [ref=f4e131]
+        - button "Ingresar" [ref=f4e132]
+  - generic [ref=f4e118]: Ingresar · Consultorio

@@ -13,5 +13,5 @@ export const STAFF_PASSWORD = process.env.SEED_STAFF_PASSWORD ?? 'change-me-too'
 /** Session cookie written once by `auth.setup.ts` and reused by every staff test. */
 export const STAFF_STORAGE_STATE = 'tests/e2e/.auth/staff.json';
 
-/** Better Auth's session cookie name (default `cookiePrefix`). */
-export const STAFF_SESSION_COOKIE = 'better-auth.session_token';
+/** JWT session cookie name written by `auth.setup.ts` and reused by specs. */
+export const STAFF_SESSION_COOKIE = 'auth_token';

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { authClient } from '#lib/auth-client.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import type { Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
@@ -10,7 +9,7 @@
 	let menuOpen = $state(false);
 
 	async function signOut() {
-		await authClient.signOut();
+		await fetch('/api/logout', { method: 'POST' });
 		await goto(resolve('/login'));
 	}
 </script>
@@ -29,7 +28,8 @@
 				</nav>
 			</div>
 			<div class="flex items-center gap-3 text-sm">
-				<span class="text-muted-foreground hidden sm:inline">{data.user.name}</span>
+				<span class="text-muted-foreground hidden sm:inline">{data.user.username}</span>
+
 				<Button variant="ghost" size="sm" onclick={signOut}>Salir</Button>
 				<Button variant="ghost" size="sm" class="md:hidden" onclick={() => (menuOpen = !menuOpen)} aria-label="Menú">
 					☰

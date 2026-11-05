@@ -1,26 +1,25 @@
 import { randomUUID } from 'node:crypto';
-import { hashPassword } from 'better-auth/crypto';
-import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from './schema.js';
 import {
-	account,
 	appointmentServices,
 	appointments,
 	followUps,
 	invoiceHistory,
 	patients,
 	reminderRecords,
-	servicePrices,
-	user
+	servicePrices
 } from './schema.js';
 
 /**
  * Seeding logic shared by `scripts/seed.ts` (local file database) and the
  * Playwright global setup (local D1 through `wrangler`'s platform proxy).
  *
- * Keeps the same data sets as before: one staff account, the service catalog
+ * Staff is authenticated by JWT from environment variables (no user table in
+ * the database). All seeded records attribute actions to a fixed staff id.
+ *
+ * Keeps the same data sets as before: one staff identity, the service catalog
  * and synthetic patients/appointments — idempotent on repeated runs.
  */
 export type SeedDatabase =
@@ -39,6 +38,9 @@ const DEFAULT_PROFILE: SeedProfile = {
 	staffPassword: 'change-me-too'
 };
 
+/** Fixed staff identity used to attribute seeded records (no DB user table). */
+const STAFF_ID = 'staff';
+
 export async function seedDatabase(
 	input: SeedDatabase,
 	profileOverride?: Partial<SeedProfile>
@@ -49,39 +51,10 @@ export async function seedDatabase(
 	const db = input as DrizzleD1Database<typeof schema>;
 	const profile = { ...DEFAULT_PROFILE, ...profileOverride };
 
-	const staffId = await ensureStaffUser(db, profile);
-	await seedServiceCatalog(db, staffId);
-	await seedSyntheticData(db, staffId);
+	await seedServiceCatalog(db, STAFF_ID);
+	await seedSyntheticData(db, STAFF_ID);
 
-	return { staffId, staffEmail: profile.staffEmail };
-}
-
-/** Insert user + credential account. better-auth's scrypt hash format. */
-async function ensureStaffUser(
-	db: DrizzleD1Database<typeof schema>,
-	profile: SeedProfile
-): Promise<string> {
-	const [existing] = await db
-		.select({ id: user.id })
-		.from(user)
-		.where(eq(user.email, profile.staffEmail))
-		.limit(1);
-	if (existing) return existing.id;
-
-	const staffId = randomUUID();
-	await db.insert(user).values({
-		id: staffId,
-		name: profile.staffName,
-		email: profile.staffEmail
-	});
-	await db.insert(account).values({
-		id: randomUUID(),
-		accountId: staffId,
-		providerId: 'credential',
-		userId: staffId,
-		password: await hashPassword(profile.staffPassword)
-	});
-	return staffId;
+	return { staffId: STAFF_ID, staffEmail: profile.staffEmail };
 }
 
 /** Service type catalog. Permanent reference data; seeded once, never re-priced here. */

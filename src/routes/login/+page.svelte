@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { authClient } from '#lib/auth-client.ts';
 	import { Alert, AlertDescription } from '#lib/components/ui/alert/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import * as Card from '#lib/components/ui/card/index.ts';
 	import Input from '#lib/components/ui/input/input.svelte';
 	import Label from '#lib/components/ui/label/label.svelte';
 
-	let email = $state('');
+	let username = $state('');
 	let password = $state('');
 	let error = $state<string | null>(null);
 	let pending = $state(false);
@@ -18,15 +17,25 @@
 		pending = true;
 		error = null;
 
-		const { error: signInError } = await authClient.signIn.email({ email, password });
-		pending = false;
+		try {
+			const response = await fetch('/api/login', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ username, password })
+			});
 
-		if (signInError) {
+			if (response.ok) {
+				await goto(resolve('/(app)/dashboard'));
+				return;
+			}
+
+			const data = (await response.json()) as { error?: string };
+			error = data.error || 'Correo o contraseña incorrectos.';
+		} catch {
 			error = 'Correo o contraseña incorrectos.';
-			return;
+		} finally {
+			pending = false;
 		}
-
-		await goto(resolve('/(app)/dashboard'));
 	}
 </script>
 
@@ -47,14 +56,14 @@
 		<Card.Content>
 			<form class="space-y-4" onsubmit={handleSubmit}>
 				<div class="space-y-2">
-					<Label for="email">Correo</Label>
+					<Label for="username">Correo o usuario</Label>
 					<Input
-						id="email"
-						name="email"
-						type="email"
+						id="username"
+						name="username"
+						type="text"
 						autocomplete="username"
 						required
-						bind:value={email}
+						bind:value={username}
 					/>
 				</div>
 
@@ -83,3 +92,4 @@
 		</Card.Content>
 	</Card.Root>
 </main>
+

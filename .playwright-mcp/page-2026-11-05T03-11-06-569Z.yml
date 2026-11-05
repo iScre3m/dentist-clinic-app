@@ -1,0 +1,88 @@
+- generic [ref=f8e2]:
+  - generic [ref=f8e17]:
+    - banner [ref=f8e18]:
+      - generic [ref=f8e19]:
+        - generic [ref=f8e20]:
+          - generic [ref=f8e21]: Consultorio
+          - navigation [ref=f8e22]:
+            - link "Panel" [ref=f8e23] [cursor=pointer]:
+              - /url: /dashboard
+            - link "Pacientes" [ref=f8e24] [cursor=pointer]:
+              - /url: /pacientes
+            - link "Seguimientos" [ref=f8e25] [cursor=pointer]:
+              - /url: /follow-ups
+            - link "Prácticas" [ref=f8e26] [cursor=pointer]:
+              - /url: /precios
+            - link "Facturas" [ref=f8e27] [cursor=pointer]:
+              - /url: /facturas
+        - generic [ref=f8e28]:
+          - generic [ref=f8e29]: staff@example.com
+          - button "Salir" [ref=f8e30]
+    - main [ref=f8e31]:
+      - generic [ref=f8e32]:
+        - generic [ref=f8e33]:
+          - heading "Panel" [level=1] [ref=f8e34]
+          - paragraph [ref=f8e35]: Turnos próximos y eventos que necesitan un paciente.
+        - generic [ref=f8e36]:
+          - generic [ref=f8e37]: Calendario de la práctica
+          - generic [ref=f8e40]:
+            - generic [ref=f8e41]: Sin sincronización registrada
+            - button "Conectar" [ref=f8e45]
+        - generic [ref=f8e46]:
+          - generic [ref=f8e47]: Próximos turnos
+          - list [ref=f8e50]:
+            - listitem [ref=f8e51]:
+              - generic [ref=f8e52]:
+                - paragraph [ref=f8e53]: Lucía Fernández
+                - paragraph [ref=f8e54]: vie, 6 nov, 10:00 a. m. · +5491155550001
+              - generic [ref=f8e55]:
+                - generic [ref=f8e56]: Confirmado
+                - button "Confirmar" [ref=f8e58]
+                - button "Asistió" [ref=f8e60]
+                - button "No vino" [ref=f8e62]
+                - button "Enviar recordatorio" [ref=f8e63]
+                - button "Factura" [ref=f8e64]
+            - listitem [ref=f8e65]:
+              - generic [ref=f8e66]:
+                - paragraph [ref=f8e67]: Mateo Ramírez
+                - paragraph [ref=f8e68]: sáb, 7 nov, 03:30 p. m. · +5491155550002
+              - generic [ref=f8e69]:
+                - generic [ref=f8e70]: Sin confirmar
+                - button "Confirmar" [ref=f8e72]
+                - button "Asistió" [ref=f8e74]
+                - button "No vino" [ref=f8e76]
+                - button "Enviar recordatorio" [ref=f8e77]
+                - button "Factura" [ref=f8e78]
+            - listitem [ref=f8e79]:
+              - generic [ref=f8e80]:
+                - paragraph [ref=f8e81]: Sin paciente
+                - paragraph [ref=f8e82]: dom, 8 nov, 11:30 a. m.
+            - listitem [ref=f8e83]:
+              - generic [ref=f8e84]:
+                - paragraph [ref=f8e85]: Sofía Duarte
+                - paragraph [ref=f8e86]: mar, 10 nov, 09:00 a. m. · +5491144440002
+              - generic [ref=f8e87]:
+                - generic [ref=f8e88]: Sin confirmar
+                - button "Confirmar" [ref=f8e90]
+                - button "Asistió" [ref=f8e92]
+                - button "No vino" [ref=f8e94]
+                - generic [ref=f8e95]: "No se puede enviar recordatorio: falta consentimiento o número válido."
+                - button "Factura" [ref=f8e96]
+        - generic [ref=f8e97]:
+          - generic [ref=f8e98]: Eventos sin paciente
+          - list [ref=f8e101]:
+            - listitem [ref=f8e102]:
+              - generic [ref=f8e103]:
+                - generic [ref=f8e104]:
+                  - paragraph [ref=f8e105]: Turno
+                  - paragraph [ref=f8e106]: dom, 8 nov, 11:30 a. m.
+                - generic [ref=f8e107]: Falta vincular
+              - generic [ref=f8e109]:
+                - generic [ref=f8e110]: Telófono
+                - textbox "Telófono" [ref=f8e111]:
+                  - /placeholder: +54 9 11...
+                - button "Vincular paciente" [ref=f8e112]
+        - generic [ref=f8e113]:
+          - generic [ref=f8e114]: Seguimientos
+          - paragraph [ref=f8e117]: Sin seguimientos pendientes.
+  - generic [ref=f8e118]: Panel · Consultorio

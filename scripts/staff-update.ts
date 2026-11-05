@@ -1,32 +1,24 @@
 /*
- * Change a staff account's name, email or password.
+ * Change the staff account's username and/or password.
  *
- * The credentials come from `.env` so you normally only edit, once:
- *
- *   SEED_STAFF_EMAIL=el-email-actual@dominio.com
- *   SEED_STAFF_PASSWORD=la-nueva-contraseña
+ * Staff credentials live in `.env` (AUTH_USERNAME, AUTH_PASSWORD_HASH); there is
+ * no user table in the database. This script rewrites those variables in `.env`
+ * with a freshly bcrypt-hashed password.
  *
  * Examples:
  *   pnpm staff:update -- --password NuevaContraseña2026
- *       → changes the password of whichever account SEED_STAFF_EMAIL points to,
- *         in the LOCAL database (.env DATABASE_PATH).
+ *       → changes AUTH_PASSWORD_HASH in the local .env
  *
- *   pnpm staff:update -- --password NuevaContraseña2026 --remote
- *       → same change, but on the REMOTE Cloudflare D1 database
- *         (needs CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN in .env).
- *
- *   pnpm staff:update -- --email staff@example.com --new-email laura@consultorio.com
- *   pnpm staff:update -- --email staff@example.com --name 'Dra. Laura' --password NuevaContraseña2026
+ *   pnpm staff:update -- --email laura@consultorio.com --password NuevaContraseña2026
+ *       → changes AUTH_USERNAME and AUTH_PASSWORD_HASH in the local .env
  *
  * Flags:
- *   --email <email>     account to update (default: SEED_STAFF_EMAIL from .env)
- *   --name <name>       new display name
- *   --new-email <e>     new login email
- *   --password <p>      new password
- *   --remote            update the remote D1 database instead of the local file
+ *   --email <e>     new login username (default: AUTH_USERNAME from .env)
+ *   --password <p>  new password (default: SEED_STAFF_PASSWORD from .env)
  */
 
 import { parseArgs } from 'node:util';
+import * as fs from 'node:fs';
 
 try {
 	process.loadEnvFile('.env');
@@ -37,87 +29,50 @@ try {
 const { values } = parseArgs({
 	options: {
 		email: { type: 'string' },
-		name: { type: 'string' },
-		'new-email': { type: 'string' },
-		password: { type: 'string' },
-		remote: { type: 'boolean' }
+		password: { type: 'string' }
 	}
 });
 
-const email = values.email ?? process.env.SEED_STAFF_EMAIL;
+const email = values.email ?? process.env.AUTH_USERNAME;
 const password = values.password ?? process.env.SEED_STAFF_PASSWORD;
 if (!email) {
-	console.error('Falta --email (o SEED_STAFF_EMAIL en .env).');
+	console.error('Falta --email (o AUTH_USERNAME en .env).');
 	process.exit(1);
 }
-if (!values.name && !values['new-email'] && !password) {
-	console.error(
-		'Indique al menos --name, --new-email o [--password | SEED_STAFF_PASSWORD en .env].'
-	);
+if (!password) {
+	console.error('Falta --password (o SEED_STAFF_PASSWORD en .env).');
 	process.exit(1);
 }
 
-const scope = values.remote ? 'remota (Cloudflare D1)' : 'local';
-console.log(`Actualizando cuenta en la base ${scope}: ${email}`);
-if (values.remote) {
-	const { createRemoteD1Db } = await import('./d1-remote.ts');
-	const { user, account } = await import('../src/lib/server/db/schema.ts');
-	const { eq } = await import('drizzle-orm');
-	const db = createRemoteD1Db();
-	const existing = await db.select().from(user).where(eq(user.email, email)).limit(1);
-	if (existing.length === 0) {
-		console.error(`No existe el usuario ${email} en la base remota.`);
-		process.exit(1);
-	}
-	const u = existing[0];
-	if (values.name || values['new-email']) {
-		await db
-			.update(user)
-			.set({
-				name: values.name ?? u.name,
-				email: values['new-email'] ?? u.email,
-				updatedAt: new Date()
-			})
-			.where(eq(user.id, u.id));
-	}
-	if (password) {
-		const { hashPassword } = await import('better-auth/crypto');
-		const hashed = await hashPassword(password);
-		await db
-			.update(account)
-			.set({ password: hashed, updatedAt: new Date() })
-			.where(eq(account.userId, u.id));
-	}
-	console.log(`Actualizado (remota): ${values['new-email'] ?? email}`);
-	process.exit(0);
+const { hashSync } = await import('bcryptjs');
+const hashed = hashSync(password, 10);
+
+// wrangler's .env loader expands `$…` in unquoted values, which would corrupt
+// the bcrypt hash (`$2b$10$…`). Backslash-escape the dollars so the value
+// survives: wrangler strips the backslashes, dotenv keeps the literal value.
+const escHashed = hashed.replaceAll('$', '\\$');
+
+const envPath = '.env';
+let contents = '';
+if (fs.existsSync(envPath)) {
+	contents = fs.readFileSync(envPath, 'utf8');
 }
 
-const { db } = await import('../src/lib/server/db/local');
-const { user, account } = await import('../src/lib/server/db/schema');
-const { eq } = await import('drizzle-orm');
-
-const existing = await db.select().from(user).where(eq(user.email, email)).limit(1);
-if (existing.length === 0) {
-	console.error(`No existe el usuario ${email}.`);
-	process.exit(1);
-}
-const u = existing[0];
-
-const updates: Record<string, unknown> = { updatedAt: new Date() };
-if (values.name) updates.name = values.name;
-if (values['new-email']) updates.email = values['new-email'];
-
-if (Object.keys(updates).length > 1) {
-	await db.update(user).set(updates).where(eq(user.id, u.id));
-}
-
-	if (password) {
-		const { hashPassword } = await import('better-auth/crypto');
-		const hashed = await hashPassword(password);
-		await db
-			.update(account)
-			.set({ password: hashed, updatedAt: new Date() })
-			.where(eq(account.userId, u.id));
+const setVar = (text: string, key: string, value: string): string => {
+	const regex = new RegExp(`^(${key})=.*$`, 'm');
+	if (regex.test(text)) {
+		// A function replacement is essential: bcrypt hashes contain `$…`
+		// sequences that `String.replace` would otherwise interpret as
+		// capture-group patterns and corrupt the written value.
+		return text.replace(regex, (_match, name: string) => `${name}=${value}`);
 	}
+	return text + (text.endsWith('\n') ? '' : '\n') + `${key}=${value}\n`;
+};
 
-	console.log(`Actualizado: ${values['new-email'] ?? email}`);
+let updated = setVar(contents, 'AUTH_USERNAME', email);
+updated = setVar(updated, 'AUTH_PASSWORD_HASH', escHashed);
+fs.writeFileSync(envPath, updated, 'utf8');
+
+console.log(`Actualizado .env: AUTH_USERNAME=${email}`);
+console.log(`AUTH_PASSWORD_HASH regenerateado (bcrypt, 10 rondas).`);
+console.log('Reinicie la aplicación para que surtan efecto las nuevas credenciales.');

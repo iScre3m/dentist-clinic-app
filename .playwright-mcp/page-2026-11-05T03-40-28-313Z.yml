@@ -1,0 +1,86 @@
+- generic [ref=f9e3]:
+  - banner [ref=f9e4]:
+    - generic [ref=f9e5]:
+      - generic [ref=f9e6]:
+        - generic [ref=f9e7]: Consultorio
+        - navigation [ref=f9e8]:
+          - link "Panel" [ref=f9e9] [cursor=pointer]:
+            - /url: ./dashboard
+          - link "Pacientes" [ref=f9e10] [cursor=pointer]:
+            - /url: ./pacientes
+          - link "Seguimientos" [ref=f9e11] [cursor=pointer]:
+            - /url: ./follow-ups
+          - link "Prácticas" [ref=f9e12] [cursor=pointer]:
+            - /url: ./precios
+          - link "Facturas" [ref=f9e13] [cursor=pointer]:
+            - /url: ./facturas
+      - generic [ref=f9e14]:
+        - generic [ref=f9e15]: staff@example.com
+        - button "Salir" [ref=f9e16]
+  - main [ref=f9e17]:
+    - generic [ref=f9e18]:
+      - generic [ref=f9e19]:
+        - heading "Panel" [level=1] [ref=f9e20]
+        - paragraph [ref=f9e21]: Turnos próximos y eventos que necesitan un paciente.
+      - generic [ref=f9e22]:
+        - generic [ref=f9e23]: Calendario de la práctica
+        - generic [ref=f9e26]:
+          - generic [ref=f9e27]: Sin sincronización registrada
+          - button "Conectar" [ref=f9e31]
+      - generic [ref=f9e32]:
+        - generic [ref=f9e33]: Próximos turnos
+        - list [ref=f9e36]:
+          - listitem [ref=f9e37]:
+            - generic [ref=f9e38]:
+              - paragraph [ref=f9e39]: Lucía Fernández
+              - paragraph [ref=f9e40]: vie, 6 nov, 10:00 a. m. · +5491155550001
+            - generic [ref=f9e41]:
+              - generic [ref=f9e42]: Confirmado
+              - button "Confirmar" [ref=f9e44]
+              - button "Asistió" [ref=f9e46]
+              - button "No vino" [ref=f9e48]
+              - button "Enviar recordatorio" [ref=f9e49]
+              - button "Factura" [ref=f9e50]
+          - listitem [ref=f9e51]:
+            - generic [ref=f9e52]:
+              - paragraph [ref=f9e53]: Mateo Ramírez
+              - paragraph [ref=f9e54]: sáb, 7 nov, 03:30 p. m. · +5491155550002
+            - generic [ref=f9e55]:
+              - generic [ref=f9e56]: Sin confirmar
+              - button "Confirmar" [ref=f9e58]
+              - button "Asistió" [ref=f9e60]
+              - button "No vino" [ref=f9e62]
+              - button "Enviar recordatorio" [ref=f9e63]
+              - button "Factura" [ref=f9e64]
+          - listitem [ref=f9e65]:
+            - generic [ref=f9e66]:
+              - paragraph [ref=f9e67]: Sin paciente
+              - paragraph [ref=f9e68]: dom, 8 nov, 11:30 a. m.
+          - listitem [ref=f9e69]:
+            - generic [ref=f9e70]:
+              - paragraph [ref=f9e71]: Sofía Duarte
+              - paragraph [ref=f9e72]: mar, 10 nov, 09:00 a. m. · +5491144440002
+            - generic [ref=f9e73]:
+              - generic [ref=f9e74]: Sin confirmar
+              - button "Confirmar" [ref=f9e76]
+              - button "Asistió" [ref=f9e78]
+              - button "No vino" [ref=f9e80]
+              - generic [ref=f9e81]: "No se puede enviar recordatorio: falta consentimiento o número válido."
+              - button "Factura" [ref=f9e82]
+      - generic [ref=f9e83]:
+        - generic [ref=f9e84]: Eventos sin paciente
+        - list [ref=f9e87]:
+          - listitem [ref=f9e88]:
+            - generic [ref=f9e89]:
+              - generic [ref=f9e90]:
+                - paragraph [ref=f9e91]: Turno
+                - paragraph [ref=f9e92]: dom, 8 nov, 11:30 a. m.
+              - generic [ref=f9e93]: Falta vincular
+            - generic [ref=f9e95]:
+              - generic [ref=f9e96]: Telófono
+              - textbox "Telófono" [ref=f9e97]:
+                - /placeholder: +54 9 11...
+              - button "Vincular paciente" [ref=f9e98]
+      - generic [ref=f9e99]:
+        - generic [ref=f9e100]: Seguimientos
+        - paragraph [ref=f9e103]: Sin seguimientos pendientes.

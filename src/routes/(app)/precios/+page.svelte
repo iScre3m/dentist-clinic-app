@@ -127,7 +127,7 @@
 								</div>
 								<p class="text-muted-foreground text-xs">
 									{price.serviceType} · {copy.list.lastUpdateLabel}
-									{price.updatedByName ?? '—'} ·
+									{price.updatedBy ?? '—'} ·
 									{formatUpdatedAt(price.updatedAt)}
 								</p>
 							</div>

@@ -1,5 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// The support/env.ts helpers read SEED_STAFF_* from the environment; load the
+// local .env so the seeded credentials in tests match the ones the app uses.
+try {
+	process.loadEnvFile('.env');
+} catch {
+	// No .env file available; the defaults in support/env.ts apply.
+}
+
 const APP_URL = process.env.APP_URL ?? 'http://localhost:5173';
 
 export default defineConfig({

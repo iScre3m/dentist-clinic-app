@@ -39,8 +39,7 @@ const {
 	invoiceHistory,
 	patients,
 	reminderRecords,
-	servicePrices,
-	user
+	servicePrices
 } = await import('#lib/server/db/schema.ts');
 const {
 	addService,
@@ -102,8 +101,7 @@ function futureDate(): Date {
 }
 
 beforeAll(async () => {
-	await db.insert(user).values([STAFF_1, STAFF_2]);
-
+	// No user table in the JWT-based MVP; staff id is passed directly to services.
 	const [activo] = await db
 		.insert(patients)
 		.values({
@@ -628,8 +626,8 @@ describe('invoice listings', () => {
 		const byAppointment = await listInvoicesByAppointment(appointment);
 		expect(byAppointment).toHaveLength(2);
 		expect(byAppointment[0]?.id).toBe(second.invoice.id);
-		expect(byAppointment[0]?.createdByName).toBe(STAFF_2.name);
-		expect(byAppointment[1]?.createdByName).toBe(STAFF_1.name);
+		expect(byAppointment[0]?.createdBy).toBe(STAFF_2.id);
+		expect(byAppointment[1]?.createdBy).toBe(STAFF_1.id);
 
 		const byPatient = await listInvoicesByPatient(patientActivoId);
 		expect(byPatient.length).toBeGreaterThanOrEqual(2);

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { db } from '#lib/server/db/index.ts';
-import { servicePrices, user } from '#lib/server/db/schema.ts';
+import { servicePrices } from '#lib/server/db/schema.ts';
 import type { ServicePrice } from '#lib/server/db/schema.ts';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
 
@@ -23,7 +23,7 @@ export type UpdateServicePriceResult =
 
 export type SetActiveResult = { ok: true } | { ok: false; reason: 'not-found' };
 
-export type ServicePriceRow = ServicePrice & { updatedByName: string | null };
+export type ServicePriceRow = ServicePrice;
 
 /** All service types, active first, each with the name of the staff that last updated it. */
 export async function listServicePrices(): Promise<ServicePriceRow[]> {
@@ -37,10 +37,9 @@ export async function listServicePrices(): Promise<ServicePriceRow[]> {
 			updatedBy: servicePrices.updatedBy,
 			updatedAt: servicePrices.updatedAt,
 			createdAt: servicePrices.createdAt,
-			updatedByName: user.name
 		})
 		.from(servicePrices)
-		.leftJoin(user, eq(servicePrices.updatedBy, user.id))
+
 		.orderBy(desc(servicePrices.isActive), asc(servicePrices.name));
 }
 

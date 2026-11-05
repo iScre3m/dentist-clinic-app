@@ -36,6 +36,13 @@
       "when": 1793595249787,
       "tag": "0004_quiet_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793815159148,
+      "tag": "0005_bright_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

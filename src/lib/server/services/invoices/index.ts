@@ -6,8 +6,7 @@ import {
 	invoiceHistory,
 	patients,
 	reminderRecords,
-	servicePrices,
-	user
+	servicePrices
 } from '#lib/server/db/schema.ts';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import type { InvoiceHistory } from '#lib/server/db/schema.ts';
@@ -362,11 +361,10 @@ export async function listInvoicesByPatient(patientId: string, limit = 20) {
 			sentAt: invoiceHistory.sentAt,
 			resentReason: invoiceHistory.resentReason,
 			createdBy: invoiceHistory.createdBy,
-			createdByName: user.name,
 			createdAt: invoiceHistory.createdAt
 		})
 		.from(invoiceHistory)
-		.leftJoin(user, eq(invoiceHistory.createdBy, user.id))
+
 		.where(eq(invoiceHistory.patientId, patientId))
 		.orderBy(desc(invoiceHistory.createdAt))
 		.limit(limit);
@@ -388,11 +386,10 @@ export async function listInvoicesByAppointment(appointmentId: string, limit = 2
 			resentReason: invoiceHistory.resentReason,
 			resentOf: invoiceHistory.resentOf,
 			createdBy: invoiceHistory.createdBy,
-			createdByName: user.name,
 			createdAt: invoiceHistory.createdAt
 		})
 		.from(invoiceHistory)
-		.leftJoin(user, eq(invoiceHistory.createdBy, user.id))
+
 		.where(eq(invoiceHistory.appointmentId, appointmentId))
 		.orderBy(desc(invoiceHistory.createdAt))
 		.limit(limit);
